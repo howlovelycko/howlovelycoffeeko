@@ -364,6 +364,22 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
       <div id="slot-notice" style="display:none;font-size:12px;color:var(--brown-dark);background:var(--cream);border-radius:12px;padding:10px 14px;margin-top:8px;">The morning pickup has closed. Please select the afternoon slot.</div>
     </div>
 
+    <div class="pickup-card" style="margin-top:14px;">
+      <div class="card-header">Payment Method</div>
+      <div class="slots-grid" id="payMethodSlots" style="grid-template-columns:repeat(3,1fr);">
+        <div class="slot" onclick="selectPayMethod(this,'Venmo')">
+          <div class="slot-time" style="font-size:14px;">Venmo</div>
+        </div>
+        <div class="slot" onclick="selectPayMethod(this,'Zelle')">
+          <div class="slot-time" style="font-size:14px;">Zelle</div>
+        </div>
+        <div class="slot" onclick="selectPayMethod(this,'Cash')">
+          <div class="slot-time" style="font-size:14px;">Cash</div>
+        </div>
+      </div>
+      <div id="pay-method-error" style="display:none;color:#E53935;font-size:12px;margin-top:6px;font-weight:500;">Please choose a payment method.</div>
+    </div>
+
     <button class="btn-primary" onclick="submitOrder()">Continue to Payment</button>
     <button class="btn-back" onclick="showTab('menu')">Back to Menu</button>
   </div>
@@ -376,9 +392,9 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
       <div class="step-dot active">2</div>
     </div>
     <div class="order-title">Pay <span id="payAmount">$0</span></div>
-    <div class="order-sub">Send payment via Venmo or Zelle, then confirm below.</div>
+    <div class="order-sub" id="paySub">Send payment via Venmo or Zelle, then confirm below.</div>
 
-    <div class="pay-stack">
+    <div class="pay-stack" id="payStack">
       <a href="https://venmo.com/Kim-Reyes-4" target="_blank" class="pay-card">
         <div class="pay-icon-circle venmo">V</div>
         <div class="pay-info">
@@ -398,7 +414,13 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
       </div>
     </div>
 
-    <button class="btn-primary" onclick="confirmOrder()">I've Paid — Confirm Order</button>
+    <div id="cashNotice" style="display:none;background:var(--cream);border-radius:16px;padding:20px;text-align:center;margin-bottom:18px;">
+      <div style="font-size:24px;margin-bottom:8px;">💵</div>
+      <div style="font-size:15px;font-weight:600;color:var(--brown);margin-bottom:4px;">Cash Payment</div>
+      <div style="font-size:13px;color:var(--text-mid);">Please bring exact change if possible. You'll pay when you pick up your order.</div>
+    </div>
+
+    <button class="btn-primary" id="confirmPayBtn" onclick="confirmOrder()">I've Paid — Confirm Order</button>
     <button class="btn-back" onclick="backToOrderForm()">Back to Order Details</button>
   </div>
 
@@ -450,10 +472,10 @@ const MORNING_CUTOFF=new Date(EVENT_DATE+'T10:00:00');
 const AFTERNOON_CLOSE=new Date(EVENT_DATE+'T14:00:00');
 const MIDNIGHT_BEFORE=new Date(EVENT_DATE+'T00:00:00');
 
-let cart={},selectedSlot='',currentOrder=null,modalItem=null,modalSweetness='Regular Sweetness';
+let cart={},selectedSlot='',selectedPayMethod='',currentOrder=null,modalItem=null,modalSweetness='Regular Sweetness';
 
 async function logToSheets(order){
-  const row={timestamp:new Date().toLocaleString(),type:'Pre-Order',name:order.name,phone:order.phone,items:order.items,total:order.total,slot:order.slot,status:'Pending Payment'};
+  const row={timestamp:new Date().toLocaleString(),type:'Pre-Order',name:order.name,phone:order.phone,items:order.items,total:order.total,slot:order.slot,status:'Pending Payment',payment_method:order.paymentMethod||''};
   // Save to Supabase (primary — powers the order hub)
   if(SUPABASE_URL){
     try{
@@ -573,7 +595,9 @@ function removeFromSummary(key){
 
 function initSlots(){if(new Date()>=MORNING_CUTOFF)disableMorningSlot();}
 function disableMorningSlot(){const s=document.getElementById('slot-morning');if(s){s.classList.add('disabled');s.onclick=null;document.getElementById('morning-cutoff').textContent='Closed';document.getElementById('slot-notice').style.display='block';}}
-function selectSlot(el,slot){if(el.classList.contains('disabled'))return;document.querySelectorAll('.slot').forEach(s=>{s.classList.remove('selected');s.classList.remove('error');});el.classList.add('selected');selectedSlot=slot;document.getElementById('slot-error').style.display='none';}
+function selectSlot(el,slot){if(el.classList.contains('disabled'))return;document.querySelectorAll('#pickupSlots .slot').forEach(s=>{s.classList.remove('selected');s.classList.remove('error');});el.classList.add('selected');selectedSlot=slot;document.getElementById('slot-error').style.display='none';}
+
+function selectPayMethod(el,method){document.querySelectorAll('#payMethodSlots .slot').forEach(s=>s.classList.remove('selected'));el.classList.add('selected');selectedPayMethod=method;document.getElementById('pay-method-error').style.display='none';}
 
 function submitOrder(){
   const firstName=document.getElementById('custFirstName').value.trim();
@@ -583,16 +607,23 @@ function submitOrder(){
   if(!lastName){showToast('Please enter your last name');return;}
   if(!phone){showToast('Please enter your phone number');return;}
   if(phone.replace(/\D/g,'').length!==10){showToast('Please enter a valid 10-digit phone number');return;}
-  if(!selectedSlot){document.getElementById('slot-error').style.display='block';document.querySelectorAll('.slot:not(.disabled)').forEach(s=>s.classList.add('error'));document.getElementById('pickupSlots').scrollIntoView({behavior:'smooth',block:'center'});return;}
+  if(!selectedSlot){document.getElementById('slot-error').style.display='block';document.querySelectorAll('#pickupSlots .slot:not(.disabled)').forEach(s=>s.classList.add('error'));document.getElementById('pickupSlots').scrollIntoView({behavior:'smooth',block:'center'});return;}
   document.getElementById('slot-error').style.display='none';
+  if(!selectedPayMethod){document.getElementById('pay-method-error').style.display='block';document.getElementById('payMethodSlots').scrollIntoView({behavior:'smooth',block:'center'});return;}
   if(!cartCount()){showToast('Your cart is empty!');return;}
   const name=firstName+' '+lastName;
-  currentOrder={name,phone,slot:selectedSlot,notes:'',items:Object.values(cart).map(({name,qty,sweetness})=>qty+'x '+name+' ('+sweetness+')').join(', '),total:cartTotal(),status:'pending',type:'preorder'};
+  currentOrder={name,phone,slot:selectedSlot,paymentMethod:selectedPayMethod,notes:'',items:Object.values(cart).map(({name,qty,sweetness})=>qty+'x '+name+' ('+sweetness+')').join(', '),total:cartTotal(),status:'pending',type:'preorder'};
   document.getElementById('payAmount').textContent='$'+currentOrder.total;
   document.getElementById('orderFormSection').style.display='none';
   document.getElementById('paySection').style.display='block';
   document.getElementById('zelleIcon').innerHTML='Z';
   document.getElementById('zelleCopiedMsg').style.display='none';
+  // Show correct payment UI based on method
+  const isCash=selectedPayMethod==='Cash';
+  document.getElementById('payStack').style.display=isCash?'none':'flex';
+  document.getElementById('cashNotice').style.display=isCash?'block':'none';
+  document.getElementById('paySub').textContent=isCash?'You selected cash — confirm your order below.':'Send payment via '+selectedPayMethod+', then confirm below.';
+  document.getElementById('confirmPayBtn').textContent=isCash?'Confirm Order':'I\'ve Paid — Confirm Order';
   sessionStorage.setItem('hlck_pending_order',JSON.stringify(currentOrder));
   window.scrollTo(0,0);
 }
@@ -607,11 +638,12 @@ async function confirmOrder(){
   logToSheets(currentOrder);
   await new Promise(r=>setTimeout(r,600));
   sessionStorage.removeItem('hlck_pending_order');
-  document.getElementById('confirmDetails').innerHTML=currentOrder.items.split(', ').map(i=>'<div class="confirm-row"><span>'+i+'</span></div>').join('')+'<div class="confirm-row"><span>Total</span><strong style="color:var(--brown)">$'+currentOrder.total+'</strong></div><div class="confirm-row"><span>Pickup</span><strong>'+currentOrder.slot+'</strong></div><div class="confirm-row"><span>Name</span><strong>'+currentOrder.name+'</strong></div>';
-  cart={};selectedSlot='';
+  document.getElementById('confirmDetails').innerHTML=currentOrder.items.split(', ').map(i=>'<div class="confirm-row"><span>'+i+'</span></div>').join('')+'<div class="confirm-row"><span>Total</span><strong style="color:var(--brown)">$'+currentOrder.total+'</strong></div><div class="confirm-row"><span>Pickup</span><strong>'+currentOrder.slot+'</strong></div><div class="confirm-row"><span>Payment</span><strong>'+currentOrder.paymentMethod+'</strong></div><div class="confirm-row"><span>Name</span><strong>'+currentOrder.name+'</strong></div>';
+  cart={};selectedSlot='';selectedPayMethod='';
   document.querySelectorAll('.qty-num').forEach(el=>el.textContent='0');
   document.getElementById('custFirstName').value='';document.getElementById('custLastName').value='';document.getElementById('custPhone').value='';
   document.querySelectorAll('.slot').forEach(s=>s.classList.remove('selected','error'));
+  document.querySelectorAll('#payMethodSlots .slot').forEach(s=>s.classList.remove('selected'));
   renderCartBar();
   document.getElementById('orderFormSection').style.display='block';document.getElementById('paySection').style.display='none';
   if(btn){btn.disabled=false;btn.textContent="I've Paid — Confirm Order";}
