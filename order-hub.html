@@ -713,37 +713,65 @@ function renderFeed() {
 }
 
 // ══ MARK ORDER DONE → MOVE TO HISTORY ══
-function markDone(idx) {
+async function markDone(idx) {
   const order = allOrders[idx];
   if (!order) return;
-  order.completedAt = new Date().toLocaleString();
+  const completedAt = new Date().toLocaleString();
+
+  // UPDATE the original row in Supabase so auto-refresh sees it as completed
+  if (SUPABASE_URL && order.id) {
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/orders?id=eq.' + order.id, {
+        method: 'PATCH',
+        headers: { ...SUPA_HEADERS, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ type: order.type + ' (Completed)', completed_at: completedAt })
+      });
+    } catch(e) { console.error('Supabase update error:', e); }
+  }
+
+  // Log completion to Google Sheets backup
+  if (SHEETS_URL) {
+    fetch(SHEETS_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timestamp: completedAt, type: order.type + ' (Completed)', name: order.name, phone: order.phone || '', items: order.items, total: order.total, slot: order.slot, status: 'Completed' })
+    }).catch(() => {});
+  }
+
+  // Update local state
+  order.completedAt = completedAt;
   order.status = order.status.replace(/ — .*/, '') + ' — Completed';
   completedOrders.unshift(order);
   allOrders.splice(idx, 1);
-  // Log completion to Sheets
-  logToSheets({ ...order, type: order.type + ' (Completed)' });
   updateStats();
   renderFeed();
   showToast('Order marked done!');
 }
 
-function voidOrder(idx) {
+async function voidOrder(idx) {
   const order = allOrders[idx];
   if (!order) return;
   if (!confirm('Void this order for ' + (order.name || 'customer') + '?')) return;
-  order.voidedAt = new Date().toLocaleString();
+  const voidedAt = new Date().toLocaleString();
+
+  // UPDATE the original row in Supabase so auto-refresh sees it as voided
+  if (SUPABASE_URL && order.id) {
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/orders?id=eq.' + order.id, {
+        method: 'PATCH',
+        headers: { ...SUPA_HEADERS, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ type: order.type + ' (Voided)' })
+      });
+    } catch(e) { console.error('Supabase update error:', e); }
+  }
+
+  // Log void to Google Sheets with negative total for accurate accounting
+  if (SHEETS_URL) {
+    fetch(SHEETS_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timestamp: voidedAt, type: order.type + ' (Voided)', name: order.name, phone: order.phone || '', items: order.items, total: '-' + parseFloat(order.total).toFixed(2), slot: order.slot, status: 'VOIDED — was: ' + order.status })
+    }).catch(() => {});
+  }
+
+  // Update local state
   allOrders.splice(idx, 1);
-  // Log void to Sheets so totals stay accurate
-  logToSheets({
-    timestamp: order.voidedAt,
-    type: order.type + ' (Voided)',
-    name: order.name,
-    phone: order.phone || '',
-    items: order.items,
-    total: '-' + parseFloat(order.total).toFixed(2),
-    slot: order.slot,
-    status: 'VOIDED — was: ' + order.status
-  });
   updateStats();
   renderFeed();
   showToast('Order voided');
@@ -1035,6 +1063,15 @@ function initHub() {
   loadOrders(true);
   startAutoRefresh();
 }
+
+// ══ KEYBOARD SUPPORT FOR PIN SCREEN ══
+document.addEventListener('keydown', (e) => {
+  const lockScreen = document.getElementById('lockScreen');
+  if (lockScreen.classList.contains('hidden')) return; // Hub already unlocked
+  if (e.key >= '0' && e.key <= '9') { lockPress(e.key); e.preventDefault(); }
+  else if (e.key === 'Backspace') { lockBackspace(); e.preventDefault(); }
+  else if (e.key === 'Escape' || e.key === 'Delete') { lockClear(); e.preventDefault(); }
+});
 
 window.addEventListener('load', () => {
   // Copy logo to lock screen
