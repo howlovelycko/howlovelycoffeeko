@@ -165,9 +165,24 @@ select.form-input{cursor:pointer;}
 .order-card.completed{border-left-color:var(--green);opacity:0.8;}
 .badge-done{background:var(--green-light);color:var(--green);}
 .order-done-time{font-size:11px;color:var(--text-soft);margin-top:4px;}
-.slot-tag{display:inline-block;padding:4px 10px;border-radius:50px;font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;margin-top:6px;}
-.slot-tag.before{background:#FFF3E0;color:#E65100;border:1.5px solid #FFB74D;}
-.slot-tag.after{background:#E3F2FD;color:#1565C0;border:1.5px solid #64B5F6;}
+.slot-tag{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:12px;font-size:13px;font-weight:600;margin-top:8px;border:1.5px solid;}
+.slot-tag .slot-title{font-weight:700;font-size:14px;}
+.slot-tag .slot-time{font-weight:500;opacity:0.8;}
+.slot-tag.pre-service{background:#FFF3E0;color:#E65100;border-color:#FFB74D;}
+.slot-tag.mid-morning{background:#E8F5E9;color:#2E7D32;border-color:#81C784;}
+.slot-tag.live-pickup{background:#E3F2FD;color:#1565C0;border-color:#64B5F6;}
+
+/* ══ FEED SECTION HEADERS ══ */
+.feed-section-header{display:flex;align-items:center;gap:10px;margin:20px 0 10px;padding:0 2px;}
+.feed-section-header:first-child{margin-top:0;}
+.feed-section-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.feed-section-dot.pre-service{background:#E65100;}
+.feed-section-dot.mid-morning{background:#2E7D32;}
+.feed-section-dot.live-pickup{background:#1565C0;}
+.feed-section-dot.walkin{background:var(--brown);}
+.feed-section-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:var(--brown);}
+.feed-section-count{font-size:11px;color:var(--text-soft);font-weight:500;}
+.feed-section-line{flex:1;height:1.5px;background:var(--cream-dark);}
 .badge-pending{background:#FFF8E1;color:#F57F17;border:1px solid #FFD54F;}
 .badge-paid{background:var(--green-light);color:var(--green);}
 .btn-paid{padding:7px 18px;border-radius:50px;border:1.5px solid var(--green);background:var(--white);color:var(--green);font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;letter-spacing:0.02em;}
@@ -674,41 +689,67 @@ function renderFeed() {
     feed.innerHTML = '<div class="empty-state"><div class="empty-icon">\u2615</div><div class="empty-text">No orders yet.</div></div>';
     return;
   }
-  feed.innerHTML = filtered.map((o, i) => {
-    const isWalkin = o.type === 'Walk-In';
-    const isLive = o.type === 'live';
-    const realIdx = allOrders.indexOf(o);
-    const isPaid = (o.status || '').includes('Paid');
-    const isPending = !isPaid && !isWalkin;
-    const slotLabel = o.slot || '';
-    const payMethod = o.payment_method || o.paymentMethod || '';
-    const cardClass = isWalkin ? ' walkin' : (isLive ? ' live' : '');
-    const badgeClass = isWalkin ? 'badge-walkin' : (isLive ? 'badge-live' : 'badge-preorder');
-    const badgeText = isLive ? 'Live' : o.type;
-    return '<div class="order-card' + cardClass + '">' +
-      '<div class="order-card-header">' +
-        '<span class="order-name">' + (o.name || 'Customer') + '</span>' +
-        '<div style="display:flex;gap:6px;align-items:center;">' +
-          (isPending ? '<span class="order-badge badge-pending">Pending</span>' : '') +
-          (isPaid ? '<span class="order-badge badge-paid">Paid</span>' : '') +
-          '<span class="order-badge ' + badgeClass + '">' + badgeText + '</span>' +
-        '</div>' +
-      '</div>' +
-      '<div class="order-items">' + o.items + '</div>' +
-      (payMethod ? '<div class="pay-method">Payment: ' + payMethod + '</div>' : '') +
-      '<div class="order-meta">' +
-        '<span><strong>$' + parseFloat(o.total).toFixed(2) + '</strong></span>' +
-        '<span>' + (o.status || '') + '</span>' +
-        (o.phone ? '<span>' + o.phone + '</span>' : '') +
-      '</div>' +
-      (slotLabel && slotLabel !== 'Walk-In' ? '<div class="slot-tag">' + slotLabel + '</div>' : '') +
-      '<div class="order-actions">' +
-        (isPending ? '<button class="btn-paid" onclick="confirmPaid(' + realIdx + ')">Confirm Paid</button>' : '') +
-        '<button class="btn-done" onclick="markDone(' + realIdx + ')">Mark Done \u2713</button>' +
-        '<button class="btn-void" onclick="voidOrder(' + realIdx + ')">Void \u2715</button>' +
-      '</div>' +
+  // Group orders by pickup slot
+  const groups = [
+    { key: 'pre-service', title: 'Pre-Service', time: '8:40 \u2013 9:00 AM', match: o => (o.slot||'').includes('8:40') },
+    { key: 'mid-morning', title: 'Mid-Morning', time: '9:30 \u2013 9:50 AM', match: o => (o.slot||'').includes('9:30') },
+    { key: 'live-pickup', title: 'Live Pickup', time: '9:40 \u2013 10:15 AM', match: o => (o.slot||'').includes('9:40') || (o.slot||'').includes('10:15') || o.type === 'live' },
+    { key: 'walkin', title: 'Walk-Ins', time: '', match: o => o.type === 'Walk-In' },
+  ];
+  let html = '';
+  groups.forEach(g => {
+    const groupOrders = filtered.filter(g.match);
+    if (!groupOrders.length) return;
+    html += '<div class="feed-section-header">' +
+      '<div class="feed-section-dot ' + g.key + '"></div>' +
+      '<span class="feed-section-title">' + g.title + '</span>' +
+      (g.time ? '<span class="feed-section-count">' + g.time + '</span>' : '') +
+      '<span class="feed-section-count">(' + groupOrders.length + ')</span>' +
+      '<div class="feed-section-line"></div>' +
     '</div>';
-  }).join('');
+    html += groupOrders.map(o => renderOrderCard(o)).join('');
+  });
+  // Catch any orders that don't match a group
+  const ungrouped = filtered.filter(o => !groups.some(g => g.match(o)));
+  if (ungrouped.length) {
+    html += '<div class="feed-section-header"><span class="feed-section-title">Other</span><div class="feed-section-line"></div></div>';
+    html += ungrouped.map(o => renderOrderCard(o)).join('');
+  }
+  feed.innerHTML = html;
+}
+
+function renderOrderCard(o) {
+  const isWalkin = o.type === 'Walk-In';
+  const isLive = o.type === 'live';
+  const realIdx = allOrders.indexOf(o);
+  const isPaid = (o.status || '').includes('Paid');
+  const isPending = !isPaid && !isWalkin;
+  const payMethod = o.payment_method || o.paymentMethod || '';
+  const cardClass = isWalkin ? ' walkin' : (isLive ? ' live' : '');
+  const badgeClass = isWalkin ? 'badge-walkin' : (isLive ? 'badge-live' : 'badge-preorder');
+  const badgeText = isLive ? 'Live' : o.type;
+  return '<div class="order-card' + cardClass + '">' +
+    '<div class="order-card-header">' +
+      '<span class="order-name">' + (o.name || 'Customer') + '</span>' +
+      '<div style="display:flex;gap:6px;align-items:center;">' +
+        (isPending ? '<span class="order-badge badge-pending">Pending</span>' : '') +
+        (isPaid ? '<span class="order-badge badge-paid">Paid</span>' : '') +
+        '<span class="order-badge ' + badgeClass + '">' + badgeText + '</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="order-items">' + o.items + '</div>' +
+    (payMethod ? '<div class="pay-method">Payment: ' + payMethod + '</div>' : '') +
+    '<div class="order-meta">' +
+      '<span><strong>$' + parseFloat(o.total).toFixed(2) + '</strong></span>' +
+      '<span>' + (o.status || '') + '</span>' +
+      (o.phone ? '<span>' + o.phone + '</span>' : '') +
+    '</div>' +
+    '<div class="order-actions">' +
+      (isPending ? '<button class="btn-paid" onclick="confirmPaid(' + realIdx + ')">Confirm Paid</button>' : '') +
+      '<button class="btn-done" onclick="markDone(' + realIdx + ')">Mark Done \u2713</button>' +
+      '<button class="btn-void" onclick="voidOrder(' + realIdx + ')">Void \u2715</button>' +
+    '</div>' +
+  '</div>';
 }
 
 // ══ CONFIRM PAYMENT ══
@@ -813,7 +854,10 @@ function loadOrders(silent) {
   if (!SUPABASE_URL) { if (!silent) showToast('Supabase not configured'); return; }
   if (!silent) showToast('Refreshing...');
   fetch(SUPABASE_URL + '/rest/v1/orders?select=*&order=id.desc', { headers: SUPA_HEADERS })
-    .then(r => r.json())
+    .then(r => {
+      if (!r.ok) throw new Error('Status ' + r.status);
+      return r.json();
+    })
     .then(rows => {
       allOrders = rows.filter(r => !(r.type||'').includes('(Voided)') && !(r.type||'').includes('(Completed)')).map(r => ({
         id:r.id, timestamp:r.timestamp||'', type:r.type||'', name:r.name||'', phone:r.phone||'',
@@ -826,7 +870,10 @@ function loadOrders(silent) {
       updateStats(); renderFeed(); renderHistory();
       if (!silent) showToast('Orders refreshed!');
     })
-    .catch(err => { console.error('Load error:', err); if (!silent) showToast('Could not load orders'); });
+    .catch(err => {
+      console.error('Load error:', err);
+      if (!silent) showToast('Could not reach Supabase \u2014 check if project is active');
+    });
 }
 
 let refreshInterval = null;

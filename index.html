@@ -247,36 +247,20 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
       <div class="card-header">Pickup Time</div>
       <div class="slots-grid" id="pickupSlots" style="grid-template-columns:1fr 1fr 1fr;">
         <div class="slot" id="slot-early" onclick="selectSlot(this,'8:40 – 9:00 AM')">
-          <div class="slot-time" style="font-size:13px;">8:40 – 9:00 AM</div>
-          <div class="slot-cutoff" id="early-cutoff">Pre-service</div>
+          <div style="font-weight:700;font-size:14px;color:var(--white);margin-bottom:4px;text-shadow:0 1px 2px rgba(62,39,35,0.1);">Pre-Service</div>
+          <div class="slot-time" style="font-size:12px;opacity:0.85;">8:40 – 9:00 AM</div>
         </div>
         <div class="slot" id="slot-mid" onclick="selectSlot(this,'9:30 – 9:50 AM')">
-          <div class="slot-time" style="font-size:13px;">9:30 – 9:50 AM</div>
-          <div class="slot-cutoff" id="mid-cutoff">Mid-morning</div>
+          <div style="font-weight:700;font-size:14px;color:var(--white);margin-bottom:4px;text-shadow:0 1px 2px rgba(62,39,35,0.1);">Mid-Morning</div>
+          <div class="slot-time" style="font-size:12px;opacity:0.85;">9:30 – 9:50 AM</div>
         </div>
         <div class="slot" id="slot-live" onclick="selectSlot(this,'9:40 – 10:15 AM')">
-          <div class="slot-time" style="font-size:13px;">9:40 – 10:15 AM</div>
-          <div class="slot-cutoff">Live pickup</div>
+          <div style="font-weight:700;font-size:14px;color:var(--white);margin-bottom:4px;text-shadow:0 1px 2px rgba(62,39,35,0.1);">Live Pickup</div>
+          <div class="slot-time" style="font-size:12px;opacity:0.85;">9:40 – 10:15 AM</div>
         </div>
       </div>
       <div id="slot-error" style="display:none;">Please choose a pickup time.</div>
       <div id="slot-notice" style="display:none;font-size:12px;color:var(--brown-dark);background:var(--cream);border-radius:12px;padding:10px 14px;margin-top:8px;">This pickup slot has closed. Please select another.</div>
-    </div>
-
-    <div class="pickup-card" style="margin-top:14px;">
-      <div class="card-header">Payment Method</div>
-      <div class="slots-grid" id="payMethodSlots" style="grid-template-columns:repeat(3,1fr);">
-        <div class="slot" onclick="selectPayMethod(this,'Venmo')">
-          <div class="slot-time" style="font-size:14px;">Venmo</div>
-        </div>
-        <div class="slot" onclick="selectPayMethod(this,'Zelle')">
-          <div class="slot-time" style="font-size:14px;">Zelle</div>
-        </div>
-        <div class="slot" onclick="selectPayMethod(this,'Cash')">
-          <div class="slot-time" style="font-size:14px;">Cash</div>
-        </div>
-      </div>
-      <div id="pay-method-error" style="display:none;color:#E53935;font-size:12px;margin-top:6px;font-weight:500;">Please choose a payment method.</div>
     </div>
 
     <button class="btn-primary" onclick="submitOrder()">Continue to Payment</button>
@@ -393,7 +377,7 @@ const MENU=[
   {id:'item9',num:9,name:'Espresso',price:2,cat:'classic',desc:'Single shot of espresso',milk:null,sweetener:null,sweetness:null},
 ];
 
-let cart={},selectedSlot='',selectedPayMethod='',currentOrder=null,modalItem=null;
+let cart={},selectedSlot='',currentOrder=null,modalItem=null;
 let modalMilk='',modalSweetener='',modalSweetness='',modalQty=1;
 function safeId(str){return str.replace(/[^a-zA-Z0-9]/g,'').slice(0,40);}
 
@@ -549,16 +533,15 @@ function adjustCartQty(key,delta){
 // ══ SLOTS ══
 function initSlots(){
   const now=new Date();
-  if(now>=SLOT_EARLY_CUTOFF)disableSlot('slot-early','early-cutoff');
-  if(now>=SLOT_MID_CUTOFF)disableSlot('slot-mid','mid-cutoff');
-  if(now>=SLOT_LIVE_CUTOFF)disableSlot('slot-live',null);
+  if(now>=SLOT_EARLY_CUTOFF)disableSlot('slot-early');
+  if(now>=SLOT_MID_CUTOFF)disableSlot('slot-mid');
+  if(now>=SLOT_LIVE_CUTOFF)disableSlot('slot-live');
 }
-function disableSlot(slotId,cutoffId){
+function disableSlot(slotId){
   const s=document.getElementById(slotId);
-  if(s){s.classList.add('disabled');s.onclick=null;if(cutoffId){const c=document.getElementById(cutoffId);if(c)c.textContent='Closed';}document.getElementById('slot-notice').style.display='block';}
+  if(s){s.classList.add('disabled');s.onclick=null;document.getElementById('slot-notice').style.display='block';}
 }
 function selectSlot(el,slot){if(el.classList.contains('disabled'))return;document.querySelectorAll('#pickupSlots .slot').forEach(s=>{s.classList.remove('selected','error');});el.classList.add('selected');selectedSlot=slot;document.getElementById('slot-error').style.display='none';}
-function selectPayMethod(el,method){document.querySelectorAll('#payMethodSlots .slot').forEach(s=>s.classList.remove('selected'));el.classList.add('selected');selectedPayMethod=method;document.getElementById('pay-method-error').style.display='none';}
 
 // ══ SUBMIT ORDER ══
 function submitOrder(){
@@ -571,11 +554,10 @@ function submitOrder(){
   if(phone.replace(/\D/g,'').length!==10){showToast('Please enter a valid 10-digit phone number');return;}
   if(!selectedSlot){document.getElementById('slot-error').style.display='block';document.querySelectorAll('#pickupSlots .slot:not(.disabled)').forEach(s=>s.classList.add('error'));document.getElementById('pickupSlots').scrollIntoView({behavior:'smooth',block:'center'});return;}
   document.getElementById('slot-error').style.display='none';
-  if(!selectedPayMethod){document.getElementById('pay-method-error').style.display='block';document.getElementById('payMethodSlots').scrollIntoView({behavior:'smooth',block:'center'});return;}
   if(!cartCount()){showToast('Your cart is empty!');return;}
   const name=firstName+' '+lastName;
   const isLive=selectedSlot==='9:40 \u2013 10:15 AM';
-  currentOrder={name,phone,slot:selectedSlot,paymentMethod:selectedPayMethod,notes:'',
+  currentOrder={name,phone,slot:selectedSlot,paymentMethod:'',notes:'',
     items:Object.values(cart).map(({name,qty,milk,sweetener,sweetness})=>{
       const opts=[milk!=='—'?milk:'',sweetener!=='—'?sweetener:'',sweetness!=='—'?sweetness:''].filter(Boolean).join(', ');
       return qty+'x '+name+(opts?' ('+opts+')':'');
@@ -586,11 +568,10 @@ function submitOrder(){
   document.getElementById('paySection').style.display='block';
   document.getElementById('zelleIcon').innerHTML='Z';
   document.getElementById('zelleCopiedMsg').style.display='none';
-  const isCash=selectedPayMethod==='Cash';
-  document.getElementById('payStack').style.display=isCash?'none':'flex';
-  document.getElementById('cashNotice').style.display=isCash?'block':'none';
-  document.getElementById('paySub').textContent=isCash?'You selected cash \u2014 confirm your order below.':'Send payment via '+selectedPayMethod+', then confirm below.';
-  document.getElementById('confirmPayBtn').textContent=isCash?'Confirm Order':'I\'ve Paid \u2014 Confirm Order';
+  document.getElementById('payStack').style.display='flex';
+  document.getElementById('cashNotice').style.display='block';
+  document.getElementById('paySub').textContent='Send payment via Venmo or Zelle, or pay cash at pickup.';
+  document.getElementById('confirmPayBtn').textContent='I\u2019ve Paid \u2014 Confirm Order';
   sessionStorage.setItem('hlck_pending_order',JSON.stringify(currentOrder));
   window.scrollTo(0,0);
 }
@@ -617,11 +598,10 @@ async function confirmOrder(){
   await logToSheets(currentOrder);
   await new Promise(r=>setTimeout(r,600));
   sessionStorage.removeItem('hlck_pending_order');
-  document.getElementById('confirmDetails').innerHTML=currentOrder.items.split(', ').map(i=>'<div class="confirm-row"><span>'+i+'</span></div>').join('')+'<div class="confirm-row"><span>Total</span><strong style="color:var(--brown)">$'+currentOrder.total+'</strong></div><div class="confirm-row"><span>Pickup</span><strong>'+currentOrder.slot+'</strong></div><div class="confirm-row"><span>Payment</span><strong>'+currentOrder.paymentMethod+'</strong></div><div class="confirm-row"><span>Name</span><strong>'+currentOrder.name+'</strong></div>';
-  cart={};selectedSlot='';selectedPayMethod='';
+  document.getElementById('confirmDetails').innerHTML=currentOrder.items.split(', ').map(i=>'<div class="confirm-row"><span>'+i+'</span></div>').join('')+'<div class="confirm-row"><span>Total</span><strong style="color:var(--brown)">$'+currentOrder.total+'</strong></div><div class="confirm-row"><span>Pickup</span><strong>'+currentOrder.slot+'</strong></div><div class="confirm-row"><span>Name</span><strong>'+currentOrder.name+'</strong></div>';
+  cart={};selectedSlot='';
   document.getElementById('custFirstName').value='';document.getElementById('custLastName').value='';document.getElementById('custPhone').value='';
   document.querySelectorAll('.slot').forEach(s=>s.classList.remove('selected','error'));
-  document.querySelectorAll('#payMethodSlots .slot').forEach(s=>s.classList.remove('selected'));
   renderCartBar();
   document.getElementById('orderFormSection').style.display='block';document.getElementById('paySection').style.display='none';
   if(btn){btn.disabled=false;btn.textContent="I've Paid \u2014 Confirm Order";}
