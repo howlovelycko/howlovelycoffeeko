@@ -588,7 +588,7 @@ async function logToSheets(order){
       if(!res.ok){console.error('Supabase error:',res.status);showToast('Order saved locally \u2014 sync pending');}
     }catch(e){console.error('Supabase error:',e);showToast('Order saved locally \u2014 sync pending');}
   }
-  if(SHEETS_URL){fetch(SHEETS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(row)}).catch(()=>{});}
+  if(SHEETS_URL){fetch(SHEETS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(row)}).catch(()=>{});}
 }
 
 async function confirmOrder(){
