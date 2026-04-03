@@ -314,8 +314,7 @@ select.form-input{cursor:pointer;}
   <div class="form-card">
     <div class="quick-add-title" style="margin-top:0;">Payment Method</div>
     <div class="pay-toggle">
-      <div class="pay-opt active" onclick="setPayMethod(this,'Cash')">Cash</div>
-      <div class="pay-opt" onclick="setPayMethod(this,'Venmo')">Venmo</div>
+      <div class="pay-opt active" onclick="setPayMethod(this,'Venmo')">Venmo</div>
       <div class="pay-opt" onclick="setPayMethod(this,'Zelle')">Zelle</div>
     </div>
 
@@ -468,12 +467,11 @@ let SHEETS_URL = '';
 
 // ══ MENU DATA (matches index.html) ══
 const MENU = [
-  {name:'Chai Duo',price:7,cat:'signature',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
-  {name:'Sapin-Sapin Latte',price:7,cat:'signature',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
-  {name:'Iced Latte',price:6,cat:'latte',milk:['Whole','Oat','Almond'],sweetener:['Vanilla','Hazelnut','Caramel','Mocha','SF Vanilla'],sweetness:['50%','100%','120%']},
-  {name:'The Usual',price:6.50,cat:'latte',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
+  {name:'Chai Duo',price:7,cat:'specialty',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
+  {name:'The Usual',price:6.50,cat:'specialty',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
   {name:'Banana Cue Latte',price:6.50,cat:'specialty',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
   {name:'Monkey Latte',price:6.50,cat:'specialty',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
+  {name:'Iced Latte',price:6,cat:'classic',milk:['Whole','Oat','Almond'],sweetener:['Vanilla','Hazelnut','Caramel','Mocha','SF Vanilla'],sweetness:['50%','100%','120%']},
   {name:'Cold Brew',price:5,cat:'classic',milk:null,sweetener:null,sweetness:null},
   {name:'Iced Americano',price:5,cat:'classic',milk:null,sweetener:null,sweetness:null},
   {name:'Espresso',price:2,cat:'classic',milk:null,sweetener:null,sweetness:null},
@@ -481,7 +479,7 @@ const MENU = [
 
 // ══ STATE ══
 let hubCart = [];
-let hubPayMethod = 'Cash';
+let hubPayMethod = 'Venmo';
 let allOrders = [];
 let completedOrders = [];
 let feedFilter = 'all';
@@ -666,8 +664,8 @@ function clearWalkin() {
   hubCart = []; cartIdCounter = 0;
   document.getElementById('hubName').value = '';
   document.getElementById('hubPhone').value = '';
-  hubPayMethod = 'Cash';
-  document.querySelectorAll('.pay-opt').forEach(c => c.classList.toggle('active', c.textContent === 'Cash'));
+  hubPayMethod = 'Venmo';
+  document.querySelectorAll('.pay-opt').forEach(c => c.classList.toggle('active', c.textContent === 'Venmo'));
   renderCart(); buildQuickGrid();
 }
 
@@ -692,7 +690,6 @@ function renderFeed() {
   // Group orders by pickup slot
   const groups = [
     { key: 'pre-service', title: 'Pre-Service', time: '8:40 \u2013 9:00 AM', match: o => (o.slot||'').includes('8:40') },
-    { key: 'mid-morning', title: 'Mid-Morning', time: '9:30 \u2013 9:50 AM', match: o => (o.slot||'').includes('9:30') },
     { key: 'live-pickup', title: 'Live Pickup', time: '9:40 \u2013 10:15 AM', match: o => (o.slot||'').includes('9:40') || (o.slot||'').includes('10:15') || o.type === 'live' },
     { key: 'walkin', title: 'Walk-Ins', time: '', match: o => o.type === 'Walk-In' },
   ];

@@ -40,8 +40,6 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
 .menu-grid::before{content:'';position:absolute;inset:0;background:repeating-conic-gradient(rgba(92,61,46,0.03) 0% 25%,transparent 0% 50%) 0 0/4px 4px;pointer-events:none;z-index:0;border-radius:12px;}
 .grid-card{background:rgba(255,255,255,0.45);border-radius:20px;padding:20px 14px 14px;text-align:center;cursor:pointer;transition:transform 0.12s,box-shadow 0.2s;border:1px solid rgba(255,255,255,0.6);box-shadow:0 2px 10px rgba(92,61,46,0.06);position:relative;overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:1;}
 .grid-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;border-radius:20px 20px 0 0;}
-.grid-card[data-cat="signature"]::before{background:var(--pink);}
-.grid-card[data-cat="latte"]::before{background:var(--brown-mid);}
 .grid-card[data-cat="specialty"]::before{background:#8BAFBF;}
 .grid-card[data-cat="classic"]::before{background:var(--brown-light);}
 .grid-card:active{transform:scale(0.97);box-shadow:0 4px 20px rgba(92,61,46,0.08);}
@@ -182,8 +180,6 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
 
   <div class="filter-bar">
     <div class="filter-pill active" onclick="filterCat('all',this)">All</div>
-    <div class="filter-pill" onclick="filterCat('signature',this)">Signature</div>
-    <div class="filter-pill" onclick="filterCat('latte',this)">Latte</div>
     <div class="filter-pill" onclick="filterCat('specialty',this)">Specialty</div>
     <div class="filter-pill" onclick="filterCat('classic',this)">Classic</div>
   </div>
@@ -245,14 +241,10 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
 
     <div class="pickup-card">
       <div class="card-header">Pickup Time</div>
-      <div class="slots-grid" id="pickupSlots" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="slots-grid" id="pickupSlots" style="grid-template-columns:1fr 1fr;">
         <div class="slot" id="slot-early" onclick="selectSlot(this,'8:40 – 9:00 AM')">
           <div style="font-weight:700;font-size:14px;color:var(--white);margin-bottom:4px;text-shadow:0 1px 2px rgba(62,39,35,0.1);">Pre-Service</div>
           <div class="slot-time" style="font-size:12px;opacity:0.85;">8:40 – 9:00 AM</div>
-        </div>
-        <div class="slot" id="slot-mid" onclick="selectSlot(this,'9:30 – 9:50 AM')">
-          <div style="font-weight:700;font-size:14px;color:var(--white);margin-bottom:4px;text-shadow:0 1px 2px rgba(62,39,35,0.1);">Mid-Morning</div>
-          <div class="slot-time" style="font-size:12px;opacity:0.85;">9:30 – 9:50 AM</div>
         </div>
         <div class="slot" id="slot-live" onclick="selectSlot(this,'9:40 – 10:15 AM')">
           <div style="font-weight:700;font-size:14px;color:var(--white);margin-bottom:4px;text-shadow:0 1px 2px rgba(62,39,35,0.1);">Live Pickup</div>
@@ -295,12 +287,6 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
         </div>
         <div class="pay-arrow">&#128203;</div>
       </div>
-    </div>
-
-    <div id="cashNotice" style="display:none;background:var(--cream);border-radius:16px;padding:20px;text-align:center;margin-bottom:18px;">
-      <div style="font-size:24px;margin-bottom:8px;">💵</div>
-      <div style="font-size:15px;font-weight:600;color:var(--brown);margin-bottom:4px;">Cash Payment</div>
-      <div style="font-size:13px;color:var(--text-mid);">Please bring exact change if possible. You'll pay when you pick up your order.</div>
     </div>
 
     <button class="btn-primary" id="confirmPayBtn" onclick="confirmOrder()">I've Paid — Confirm Order</button>
@@ -361,20 +347,18 @@ const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const SHEETS_URL='';
 const EVENT_DATE='2026-04-05';
 const SLOT_EARLY_CUTOFF=new Date(EVENT_DATE+'T08:30:00-07:00');
-const SLOT_MID_CUTOFF=new Date(EVENT_DATE+'T09:20:00-07:00');
 const SLOT_LIVE_CUTOFF=new Date(EVENT_DATE+'T10:15:00-07:00');
 const MIDNIGHT_BEFORE=new Date(EVENT_DATE+'T00:00:00-07:00');
 
 const MENU=[
-  {id:'item1',num:1,name:'Chai Duo',price:7,cat:'signature',desc:'Double chai with your choice of milk',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
-  {id:'item2',num:2,name:'Sapin-Sapin Latte',price:7,cat:'signature',desc:'Ube-inspired layered latte',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
-  {id:'item3',num:3,name:'Iced Latte',price:6,cat:'latte',desc:'Classic iced latte with your choice of sweetener',milk:['Whole','Oat','Almond'],sweetener:['Vanilla','Hazelnut','Caramel','Mocha','SF Vanilla'],sweetness:['50%','100%','120%']},
-  {id:'item4',num:4,name:'The Usual',price:6.50,cat:'latte',desc:'Our go-to iced latte \u2014 just right',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
-  {id:'item5',num:5,name:'Banana Cue Latte',price:6.50,cat:'specialty',desc:'Caramelized banana-inspired iced latte',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
-  {id:'item6',num:6,name:'Monkey Latte',price:6.50,cat:'specialty',desc:'Playful banana and espresso blend',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
-  {id:'item7',num:7,name:'Cold Brew',price:5,cat:'classic',desc:'Smooth, slow-steeped cold brew',milk:null,sweetener:null,sweetness:null},
-  {id:'item8',num:8,name:'Iced Americano',price:5,cat:'classic',desc:'Bold espresso over ice',milk:null,sweetener:null,sweetness:null},
-  {id:'item9',num:9,name:'Espresso',price:2,cat:'classic',desc:'Single shot of espresso',milk:null,sweetener:null,sweetness:null},
+  {id:'item1',num:1,name:'Chai Duo',price:7,cat:'specialty',desc:'Double chai with your choice of milk',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
+  {id:'item2',num:2,name:'The Usual',price:6.50,cat:'specialty',desc:'Smooth agave sweetness with a warm cinnamon finish',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
+  {id:'item3',num:3,name:'Banana Cue Latte',price:6.50,cat:'specialty',desc:'Caramelized banana-inspired iced latte',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
+  {id:'item4',num:4,name:'Monkey Latte',price:6.50,cat:'specialty',desc:'Playful banana and a chocolate blend',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
+  {id:'item5',num:5,name:'Iced Latte',price:6,cat:'classic',desc:'Classic iced latte with your choice of sweetener',milk:['Whole','Oat','Almond'],sweetener:['Vanilla','Hazelnut','Caramel','Mocha','SF Vanilla'],sweetness:['50%','100%','120%']},
+  {id:'item6',num:6,name:'Cold Brew',price:5,cat:'classic',desc:'Smooth, slow-steeped cold brew',milk:null,sweetener:null,sweetness:null},
+  {id:'item7',num:7,name:'Iced Americano',price:5,cat:'classic',desc:'Bold espresso over ice',milk:null,sweetener:null,sweetness:null},
+  {id:'item8',num:8,name:'Espresso',price:2,cat:'classic',desc:'Double shot of espresso',milk:null,sweetener:null,sweetness:null},
 ];
 
 let cart={},selectedSlot='',currentOrder=null,modalItem=null;
@@ -534,7 +518,6 @@ function adjustCartQty(key,delta){
 function initSlots(){
   const now=new Date();
   if(now>=SLOT_EARLY_CUTOFF)disableSlot('slot-early');
-  if(now>=SLOT_MID_CUTOFF)disableSlot('slot-mid');
   if(now>=SLOT_LIVE_CUTOFF)disableSlot('slot-live');
 }
 function disableSlot(slotId){
@@ -569,8 +552,7 @@ function submitOrder(){
   document.getElementById('zelleIcon').innerHTML='Z';
   document.getElementById('zelleCopiedMsg').style.display='none';
   document.getElementById('payStack').style.display='flex';
-  document.getElementById('cashNotice').style.display='block';
-  document.getElementById('paySub').textContent='Send payment via Venmo or Zelle, or pay cash at pickup.';
+  document.getElementById('paySub').textContent='Send payment via Venmo or Zelle, then confirm below.';
   document.getElementById('confirmPayBtn').textContent='I\u2019ve Paid \u2014 Confirm Order';
   sessionStorage.setItem('hlck_pending_order',JSON.stringify(currentOrder));
   window.scrollTo(0,0);
