@@ -176,6 +176,9 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
       <span>Cross Culture Church</span>
     </div>
     <div style="font-size:11px;color:var(--text-soft);margin-top:10px;letter-spacing:0.03em;">All lattes: cold · 12oz · 2 espresso shots</div>
+    <div id="preserviceNotice" style="display:none;margin:12px auto 0;max-width:340px;background:var(--pink-pale);border:1px solid var(--pink);border-radius:12px;padding:10px 14px;font-size:12px;color:var(--brown-dark);text-align:center;line-height:1.4;">
+      ☕ Pre-Service pre-orders close at <strong>10:00 PM on Fri, April 4th</strong>. Order early to guarantee your pickup!
+    </div>
   </div>
 
   <div class="filter-bar">
@@ -348,13 +351,14 @@ const SHEETS_URL='';
 const EVENT_DATE='2026-04-05';
 const SLOT_EARLY_CUTOFF=new Date(EVENT_DATE+'T08:30:00-07:00');
 const SLOT_LIVE_CUTOFF=new Date(EVENT_DATE+'T10:15:00-07:00');
+const PRESERVICE_ORDER_CUTOFF=new Date('2026-04-04T22:00:00-07:00');
 const MIDNIGHT_BEFORE=new Date(EVENT_DATE+'T00:00:00-07:00');
 
 const MENU=[
   {id:'item1',num:1,name:'Chai Duo',price:7,cat:'specialty',desc:'Double chai with your choice of milk',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
   {id:'item2',num:2,name:'The Usual',price:6.50,cat:'specialty',desc:'Smooth agave sweetness with a warm cinnamon finish',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
   {id:'item3',num:3,name:'Banana Cue Latte',price:6.50,cat:'specialty',desc:'Caramelized banana-inspired iced latte',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
-  {id:'item4',num:4,name:'Monkey Latte',price:6.50,cat:'specialty',desc:'Playful banana and a chocolate blend',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
+  {id:'item4',num:4,name:'Monkey Latte',price:6.50,cat:'specialty',desc:'Playful banana and chocolate blend',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
   {id:'item5',num:5,name:'Iced Latte',price:6,cat:'classic',desc:'Classic iced latte with your choice of sweetener',milk:['Whole','Oat','Almond'],sweetener:['Vanilla','Hazelnut','Caramel','Mocha','SF Vanilla'],sweetness:['50%','100%','120%']},
   {id:'item6',num:6,name:'Cold Brew',price:5,cat:'classic',desc:'Smooth, slow-steeped cold brew',milk:null,sweetener:null,sweetness:null},
   {id:'item7',num:7,name:'Iced Americano',price:5,cat:'classic',desc:'Bold espresso over ice',milk:null,sweetener:null,sweetness:null},
@@ -517,6 +521,7 @@ function adjustCartQty(key,delta){
 // ══ SLOTS ══
 function initSlots(){
   const now=new Date();
+  if(now>=PRESERVICE_ORDER_CUTOFF)disableSlot('slot-early');
   if(now>=SLOT_EARLY_CUTOFF)disableSlot('slot-early');
   if(now>=SLOT_LIVE_CUTOFF)disableSlot('slot-live');
 }
@@ -601,6 +606,8 @@ window.addEventListener('load',()=>{
   if(saved){try{currentOrder=JSON.parse(saved);document.getElementById('payAmount').textContent='$'+currentOrder.total;document.getElementById('orderFormSection').style.display='none';document.getElementById('paySection').style.display='block';const btn=document.getElementById('confirmPayBtn');if(btn){btn.disabled=false;btn.textContent="I've Paid \u2014 Confirm Order";}showPage('page-order');}catch(e){sessionStorage.removeItem('hlck_pending_order');}}
   initSlots();
   const now=new Date();
+  // Show pre-service cutoff notice before the deadline
+  if(now<PRESERVICE_ORDER_CUTOFF){document.getElementById('preserviceNotice').style.display='block';}
   if(now>=SLOT_LIVE_CUTOFF){
     document.querySelectorAll('.bnav')[1].onclick=()=>showToast('Pre-orders are now closed!');
     document.querySelectorAll('.bnav')[1].style.opacity='0.5';
