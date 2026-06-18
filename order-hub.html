@@ -250,7 +250,7 @@ select.form-input{cursor:pointer;}
 <div class="hub-header">
   <img class="hub-logo" src="logo.png" alt="How Lovely Coffee Ko."/>
   <div class="hub-title">How Lovely Coffee Ko.</div>
-  <div class="hub-subtitle">ORDER HUB · EASTER SUNDAY 2026</div>
+  <div class="hub-subtitle">ORDER HUB · FATHER'S DAY 2026</div>
   <button class="setup-gear" onclick="toggleSetup()" title="Google Sheets Setup">&#9881;</button>
 </div>
 
@@ -334,12 +334,8 @@ select.form-input{cursor:pointer;}
       <div class="sweet-options" id="hubMilkOptions"></div>
     </div>
     <div id="hubSweetenerSection" style="display:none;">
-      <div class="sweet-label">Choose Sweetener</div>
+      <div class="sweet-label">Choose Syrup</div>
       <div class="sweet-options" id="hubSweetenerOptions"></div>
-    </div>
-    <div id="hubSweetnessSection" style="display:none;">
-      <div class="sweet-label">Sweetness Level</div>
-      <div class="sweet-options" id="hubSweetnessOptions"></div>
     </div>
     <div class="sweet-label">Quantity</div>
     <div class="sweet-qty-row">
@@ -358,7 +354,6 @@ select.form-input{cursor:pointer;}
     <div class="feed-filters">
       <div class="feed-pill active" onclick="filterFeed('all',this)">All</div>
       <div class="feed-pill" onclick="filterFeed('preorder',this)">Pre-Orders</div>
-      <div class="feed-pill" onclick="filterFeed('live',this)">Live</div>
       <div class="feed-pill" onclick="filterFeed('walkin',this)">Walk-Ins</div>
     </div>
     <button class="refresh-btn" onclick="loadOrders()">Refresh</button>
@@ -467,14 +462,15 @@ let SHEETS_URL = '';
 
 // ══ MENU DATA (matches index.html) ══
 const MENU = [
-  {name:'Chai Duo',price:7,cat:'specialty',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
-  {name:'The Usual',price:6.50,cat:'specialty',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
-  {name:'Banana Cue Latte',price:6.50,cat:'specialty',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
-  {name:'Monkey Latte',price:6.50,cat:'specialty',milk:['Whole','Oat','Almond'],sweetener:null,sweetness:['50%','100%']},
-  {name:'Iced Latte',price:6,cat:'classic',milk:['Whole','Oat','Almond'],sweetener:['Vanilla','Hazelnut','Caramel','Mocha','SF Vanilla'],sweetness:['50%','100%','120%']},
-  {name:'Cold Brew',price:5,cat:'classic',milk:null,sweetener:null,sweetness:null},
-  {name:'Iced Americano',price:5,cat:'classic',milk:null,sweetener:null,sweetness:null},
-  {name:'Espresso',price:2,cat:'classic',milk:null,sweetener:null,sweetness:null},
+  {name:'Latte',price:6.50,cat:'hot',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
+  {name:'Cappuccino',price:6.50,cat:'hot',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
+  {name:'Americano',price:6.50,cat:'hot',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
+  {name:'Chai Latte',price:6.50,cat:'hot',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
+  {name:'The Usual',price:6.50,cat:'cold',milk:['Whole','Oat'],sweetener:null,sweetness:null},
+  {name:'Banana Cue',price:6.50,cat:'cold',milk:['Whole','Oat'],sweetener:null,sweetness:null},
+  {name:'Salted Coconut Cold Brew',price:6.50,cat:'cold',milk:['Whole','Oat'],sweetener:null,sweetness:null},
+  {name:'Raspberry Mocha',price:6.50,cat:'cold',milk:['Whole','Oat'],sweetener:null,sweetness:null},
+  {name:'Hot Chocolate',price:6.50,cat:'hot',milk:null,sweetener:null,sweetness:null},
 ];
 
 // ══ STATE ══
@@ -537,13 +533,6 @@ function openSweetModal(item) {
     sweetenerSec.style.display = 'block';
     sweetenerOpts.innerHTML = item.sweetener.map((s, i) => '<div class="sweet-opt' + (i === 0 ? ' active' : '') + '" onclick="pickOpt(\'sweetener\',this,\'' + s + '\')">' + s + '</div>').join('');
   } else { sweetenerSec.style.display = 'none'; sweetenerOpts.innerHTML = ''; }
-  // Sweetness
-  const sweetnessSec = document.getElementById('hubSweetnessSection');
-  const sweetnessOpts = document.getElementById('hubSweetnessOptions');
-  if (item.sweetness) {
-    sweetnessSec.style.display = 'block';
-    sweetnessOpts.innerHTML = item.sweetness.map((s, i) => '<div class="sweet-opt' + (i === 0 ? ' active' : '') + '" onclick="pickOpt(\'sweetness\',this,\'' + s + '\')">' + s + '</div>').join('');
-  } else { sweetnessSec.style.display = 'none'; sweetnessOpts.innerHTML = ''; }
   updateModalAddBtn();
   document.getElementById('sweetOverlay').classList.add('show');
 }
@@ -689,8 +678,7 @@ function renderFeed() {
   }
   // Group orders by pickup slot
   const groups = [
-    { key: 'pre-service', title: 'Pre-Service', time: '8:40 \u2013 9:00 AM', match: o => (o.slot||'').includes('8:40') },
-    { key: 'live-pickup', title: 'Live Pickup', time: '9:40 \u2013 10:15 AM', match: o => (o.slot||'').includes('9:40') || (o.slot||'').includes('10:15') || o.type === 'live' },
+    { key: 'pre-service', title: 'Pickup', time: '9:00 \u2013 9:20 AM', match: o => (o.slot||'').includes('9:00') },
     { key: 'walkin', title: 'Walk-Ins', time: '', match: o => o.type === 'Walk-In' },
   ];
   let html = '';
