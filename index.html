@@ -190,7 +190,7 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
       <span class="divider"></span>
       <span>Cross Culture Church</span>
     </div>
-    <div style="font-size:11px;color:var(--text-soft);margin-top:10px;letter-spacing:0.03em;">All drinks · 12oz · 2 espresso shots · $6.50</div>
+    <div style="font-size:11px;color:var(--text-soft);margin-top:10px;letter-spacing:0.03em;">All drinks · 12oz · 2 espresso shots</div>
     <div id="preserviceNotice" style="display:none;margin:12px auto 0;max-width:340px;background:var(--pink-pale);border:1px solid var(--pink);border-radius:12px;padding:10px 14px;font-size:12px;color:var(--brown-dark);text-align:center;line-height:1.4;">
       ☕ Pre-orders close at <strong>10:00 PM on Sat, June 20th</strong>. Order early to guarantee your pickup!
     </div>
@@ -360,13 +360,13 @@ const PRESERVICE_ORDER_CUTOFF=new Date('2026-06-20T22:00:00-07:00');
 const MENU=[
   {id:'item1',num:1,name:'Latte',price:6.50,cat:'hot',desc:'Smooth espresso with steamed milk',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
   {id:'item2',num:2,name:'Cappuccino',price:6.50,cat:'hot',desc:'Espresso topped with velvety foam',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
-  {id:'item3',num:3,name:'Americano',price:6.50,cat:'hot',desc:'Bold espresso with hot water',milk:null,sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
+  {id:'item3',num:3,name:'Americano',price:5,cat:'hot',desc:'Bold espresso with hot water',milk:null,sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
   {id:'item4',num:4,name:'Chai Latte',price:6.50,cat:'hot',desc:'Spiced chai with steamed milk',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
   {id:'item5',num:5,name:'The Usual (Bottled)',price:6.50,cat:'cold',desc:'Smooth agave sweetness with a warm cinnamon finish, served bottled.',milk:['Whole','Oat'],sweetener:null,sweetness:null},
   {id:'item6',num:6,name:'Banana Cue (Bottled)',price:6.50,cat:'cold',desc:'Caramelized banana-inspired iced latte, served bottled.',milk:['Whole','Oat'],sweetener:null,sweetness:null},
   {id:'item7',num:7,name:'Salted Coconut Cold Brew (Bottled)',price:6.50,cat:'cold',desc:'Cold brew with salted coconut cream, served bottled.',milk:['Whole','Oat'],sweetener:null,sweetness:null},
   {id:'item8',num:8,name:'Raspberry Mocha (Bottled)',price:6.50,cat:'cold',desc:'Chocolate and raspberry over ice, served bottled.',milk:['Whole','Oat'],sweetener:null,sweetness:null},
-  {id:'item9',num:9,name:'Hot Chocolate',price:6.50,cat:'hot',desc:'Rich, cozy chocolate (caffeine-free)',milk:null,sweetener:null,sweetness:null},
+  {id:'item9',num:9,name:'Hot Chocolate',price:6,cat:'hot',desc:'Rich, cozy chocolate (caffeine-free)',milk:null,sweetener:null,sweetness:null},
 ];
 
 let cart={},selectedSlot='',currentOrder=null,modalItem=null;
