@@ -97,6 +97,10 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
 .card-header::before{display:none;}
 .summary-item{display:flex;justify-content:space-between;font-size:14px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.15);color:var(--white);text-shadow:0 1px 2px rgba(62,39,35,0.1);}
 .summary-item:last-child{border:none;font-weight:600;color:var(--white);padding-top:14px;font-size:16px;}
+.summary-group{background:rgba(255,251,247,0.12);border-radius:14px;padding:2px 14px;margin-bottom:12px;}
+.summary-total-strip{display:flex;justify-content:space-between;align-items:center;background:rgba(255,251,247,0.22);border-radius:12px;padding:13px 16px;}
+.summary-total-strip .st-l{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--white);text-shadow:0 1px 2px rgba(62,39,35,0.12);}
+.summary-total-strip .st-v{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--white);text-shadow:0 1px 2px rgba(62,39,35,0.12);}
 
 /* Contact info card */
 .form-card{background:rgba(255,251,247,0.25);border-radius:24px;padding:24px;margin-bottom:18px;box-shadow:0 2px 8px rgba(62,39,35,0.04),0 12px 40px rgba(62,39,35,0.06);border:1px solid rgba(255,255,255,0.2);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}
@@ -146,6 +150,17 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
 .confirm-sub{font-size:14px;color:rgba(255,255,255,0.85);line-height:1.6;margin-bottom:32px;font-weight:300;max-width:300px;margin-left:auto;margin-right:auto;}
 .confirm-card{background:var(--white);border-radius:24px;padding:22px;text-align:left;box-shadow:0 2px 8px rgba(62,39,35,0.04),0 12px 40px rgba(62,39,35,0.06);margin-bottom:28px;border:1px solid rgba(255,255,255,0.6);}
 .confirm-row{display:flex;justify-content:space-between;font-size:14px;padding:10px 0;border-bottom:1px solid var(--cream);color:var(--text-mid);}.confirm-row:last-child{border:none;}.confirm-row strong{color:var(--text);}
+.co-label{font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:var(--text-soft);font-weight:600;margin-bottom:8px;}
+.co-group{background:#FBF4F0;border-radius:14px;padding:12px 14px;margin-bottom:12px;}
+.co-line{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;}
+.co-line .co-nm{font-size:14px;font-weight:500;color:var(--text);}
+.co-line .co-op{font-size:11.5px;color:var(--text-soft);margin-top:1px;}
+.co-line .co-pr{font-size:13px;color:var(--text-mid);white-space:nowrap;padding-left:12px;}
+.co-totstrip{display:flex;justify-content:space-between;align-items:center;background:var(--pink-pale);border-radius:12px;padding:12px 14px;margin-bottom:10px;}
+.co-totstrip .co-tl{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--brown);}
+.co-totstrip .co-tv{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--brown);}
+.co-meta{display:flex;justify-content:space-between;font-size:13px;color:var(--text-mid);padding:5px 2px;}
+.co-meta strong{color:var(--text);font-weight:600;}
 .btn-outline{background:rgba(255,255,255,0.12);border:1.5px solid rgba(255,255,255,0.4);color:var(--white);border-radius:50px;padding:14px 36px;font-family:'Outfit',sans-serif;font-weight:600;font-size:14px;cursor:pointer;transition:all 0.2s;backdrop-filter:blur(4px);}.btn-outline:hover{background:rgba(255,255,255,0.2);border-color:var(--white);}
 
 /* ══ MODAL ══ */
@@ -219,8 +234,8 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
     <div class="card">
       <div class="card-header">Order Summary</div>
       <div id="summaryItems"></div>
-      <div class="summary-item" style="margin-top:8px;">
-        <span>Total</span><strong id="summaryTotal">$0.00</strong>
+      <div class="summary-total-strip" style="margin-top:4px;">
+        <span class="st-l">Total</span><strong class="st-v" id="summaryTotal">$0.00</strong>
       </div>
     </div>
 
@@ -345,12 +360,12 @@ const PRESERVICE_ORDER_CUTOFF=new Date('2026-06-20T22:00:00-07:00');
 const MENU=[
   {id:'item1',num:1,name:'Latte',price:6.50,cat:'hot',desc:'Smooth espresso with steamed milk',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
   {id:'item2',num:2,name:'Cappuccino',price:6.50,cat:'hot',desc:'Espresso topped with velvety foam',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
-  {id:'item3',num:3,name:'Americano',price:6.50,cat:'hot',desc:'Bold espresso with hot water',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
+  {id:'item3',num:3,name:'Americano',price:6.50,cat:'hot',desc:'Bold espresso with hot water',milk:null,sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
   {id:'item4',num:4,name:'Chai Latte',price:6.50,cat:'hot',desc:'Spiced chai with steamed milk',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
-  {id:'item5',num:5,name:'The Usual',price:6.50,cat:'cold',desc:'Smooth agave sweetness with a warm cinnamon finish',milk:['Whole','Oat'],sweetener:null,sweetness:null},
-  {id:'item6',num:6,name:'Banana Cue',price:6.50,cat:'cold',desc:'Caramelized banana-inspired iced latte',milk:['Whole','Oat'],sweetener:null,sweetness:null},
-  {id:'item7',num:7,name:'Salted Coconut Cold Brew',price:6.50,cat:'cold',desc:'Cold brew with salted coconut cream',milk:['Whole','Oat'],sweetener:null,sweetness:null},
-  {id:'item8',num:8,name:'Raspberry Mocha',price:6.50,cat:'cold',desc:'Chocolate and raspberry over ice',milk:['Whole','Oat'],sweetener:null,sweetness:null},
+  {id:'item5',num:5,name:'The Usual (Bottled)',price:6.50,cat:'cold',desc:'Smooth agave sweetness with a warm cinnamon finish, served bottled.',milk:['Whole','Oat'],sweetener:null,sweetness:null},
+  {id:'item6',num:6,name:'Banana Cue (Bottled)',price:6.50,cat:'cold',desc:'Caramelized banana-inspired iced latte, served bottled.',milk:['Whole','Oat'],sweetener:null,sweetness:null},
+  {id:'item7',num:7,name:'Salted Coconut Cold Brew (Bottled)',price:6.50,cat:'cold',desc:'Cold brew with salted coconut cream, served bottled.',milk:['Whole','Oat'],sweetener:null,sweetness:null},
+  {id:'item8',num:8,name:'Raspberry Mocha (Bottled)',price:6.50,cat:'cold',desc:'Chocolate and raspberry over ice, served bottled.',milk:['Whole','Oat'],sweetener:null,sweetness:null},
   {id:'item9',num:9,name:'Hot Chocolate',price:6.50,cat:'hot',desc:'Rich, cozy chocolate (caffeine-free)',milk:null,sweetener:null,sweetness:null},
 ];
 
@@ -457,6 +472,7 @@ function goToOrder(){
 function buildSummary(){
   const c=document.getElementById('summaryItems');c.innerHTML='';
   if(!cartCount()){c.innerHTML='<div style="color:var(--text-soft);font-size:13px;padding:8px 0;">No items yet!</div>';document.getElementById('summaryTotal').textContent='$0.00';return;}
+  const group=document.createElement('div');group.className='summary-group';
   Object.entries(cart).forEach(([key,{name,qty,price,milk,sweetener,sweetness}])=>{
     const row=document.createElement('div');row.className='cart-item';row.id='cart-'+safeId(key);
     const details=[milk!=='—'?milk:'',sweetener!=='—'?sweetener:'',sweetness!=='—'?sweetness:''].filter(Boolean).join(' \u00b7 ');
@@ -475,8 +491,9 @@ function buildSummary(){
         '</div>'+
         '<button onclick="adjustCartQty(\''+safeKey+'\',-999)" style="background:none;border:none;cursor:pointer;font-size:12px;color:rgba(255,255,255,0.5);padding:4px 8px;">Remove</button>'+
       '</div>';
-    c.appendChild(row);
+    group.appendChild(row);
   });
+  c.appendChild(group);
   document.getElementById('summaryTotal').textContent='$'+cartTotal().toFixed(2);
 }
 
@@ -532,7 +549,11 @@ function submitOrder(){
   document.getElementById('slot-error').style.display='none';
   if(!cartCount()){showToast('Your cart is empty!');return;}
   const name=firstName+' '+lastName;
-  currentOrder={name,phone,slot:selectedSlot,paymentMethod:'',notes:'',
+  const lineItems=Object.values(cart).map(({name,qty,price,milk,sweetener,sweetness})=>{
+    const opts=[milk!=='—'?milk:'',sweetener!=='—'?sweetener:'',sweetness!=='—'?sweetness:''].filter(Boolean).join(' · ');
+    return {qty:qty,name:name,opts:opts,lineTotal:(qty*price).toFixed(2)};
+  });
+  currentOrder={name,phone,slot:selectedSlot,paymentMethod:'',notes:'',lineItems:lineItems,
     items:Object.values(cart).map(({name,qty,milk,sweetener,sweetness})=>{
       const opts=[milk!=='—'?milk:'',sweetener!=='—'?sweetener:'',sweetness!=='—'?sweetness:''].filter(Boolean).join(', ');
       return qty+'x '+name+(opts?' ('+opts+')':'');
@@ -572,7 +593,23 @@ async function confirmOrder(){
   await logToSheets(currentOrder);
   await new Promise(r=>setTimeout(r,600));
   sessionStorage.removeItem('hlck_pending_order');
-  document.getElementById('confirmDetails').innerHTML=currentOrder.items.split(', ').map(i=>'<div class="confirm-row"><span>'+i+'</span></div>').join('')+'<div class="confirm-row"><span>Total</span><strong style="color:var(--brown)">$'+currentOrder.total+'</strong></div><div class="confirm-row"><span>Pickup</span><strong>'+currentOrder.slot+'</strong></div><div class="confirm-row"><span>Name</span><strong>'+currentOrder.name+'</strong></div>';
+  const li=(currentOrder.lineItems&&currentOrder.lineItems.length)
+    ? currentOrder.lineItems
+    : (currentOrder.items||'').split(/,\s+(?=\d+x\s)/).map(s=>({qty:'',name:s,opts:'',lineTotal:''}));
+  const itemsHtml=li.map(it=>
+    '<div class="co-line"><div>'+
+      '<div class="co-nm">'+(it.qty!==''?it.qty+'\u00d7 ':'')+it.name+'</div>'+
+      (it.opts?'<div class="co-op">'+it.opts+'</div>':'')+
+    '</div>'+
+    (it.lineTotal?'<div class="co-pr">$'+it.lineTotal+'</div>':'')+
+    '</div>'
+  ).join('');
+  document.getElementById('confirmDetails').innerHTML=
+    '<div class="co-label">Order</div>'+
+    '<div class="co-group">'+itemsHtml+'</div>'+
+    '<div class="co-totstrip"><span class="co-tl">Total</span><span class="co-tv">$'+currentOrder.total+'</span></div>'+
+    '<div class="co-meta"><span>Pickup</span><strong>'+currentOrder.slot+'</strong></div>'+
+    '<div class="co-meta"><span>Name</span><strong>'+currentOrder.name+'</strong></div>';
   cart={};selectedSlot='';
   document.getElementById('custFirstName').value='';document.getElementById('custLastName').value='';document.getElementById('custPhone').value='';
   document.querySelectorAll('.slot').forEach(s=>s.classList.remove('selected','error'));
