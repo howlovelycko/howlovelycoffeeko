@@ -703,6 +703,10 @@ function renderFeed() {
   feed.innerHTML = html;
 }
 
+// Split a combined items string into one line per drink.
+// Splits on ", " only when it precedes a new "Nx " item, so "(Whole, Vanilla)" stays intact.
+function itemLines(items){ return String(items||'').split(/,\s+(?=\d+x\s)/).map(function(li){ return '<div>'+li+'</div>'; }).join(''); }
+
 function renderOrderCard(o) {
   const isWalkin = o.type === 'Walk-In';
   const isLive = o.type === 'live';
@@ -722,7 +726,7 @@ function renderOrderCard(o) {
         '<span class="order-badge ' + badgeClass + '">' + badgeText + '</span>' +
       '</div>' +
     '</div>' +
-    '<div class="order-items">' + o.items + '</div>' +
+    '<div class="order-items">' + itemLines(o.items) + '</div>' +
     (payMethod ? '<div class="pay-method">Payment: ' + payMethod + '</div>' : '') +
     '<div class="order-meta">' +
       '<span><strong>$' + parseFloat(o.total).toFixed(2) + '</strong></span>' +
@@ -800,7 +804,7 @@ function renderHistory() {
   feed.innerHTML = filtered.map(o =>
     '<div class="order-card completed">' +
       '<div class="order-card-header"><span class="order-name">' + (o.name || 'Customer') + '</span><span class="order-badge badge-done">Done</span></div>' +
-      '<div class="order-items">' + o.items + '</div>' +
+      '<div class="order-items">' + itemLines(o.items) + '</div>' +
       '<div class="order-meta"><span><strong>$' + parseFloat(o.total).toFixed(2) + '</strong></span><span>' + (o.slot || '') + '</span><span>' + (o.status || '') + '</span>' + (o.phone ? '<span>' + o.phone + '</span>' : '') + '</div>' +
       '<div class="order-done-time">Completed: ' + o.completedAt + '</div>' +
     '</div>'

@@ -75,9 +75,9 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
 .fab-badge{background:var(--white);color:var(--pink-deep);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
 
 /* ══ ORDER PAGE — muted rose gradient, no floral overlay ══ */
-.order-bg{background:linear-gradient(160deg, #D4A9A9 0%, #C09090 40%, #B8868A 100%);position:relative;overflow:hidden;}
-.order-bg::before{content:'';position:absolute;top:-30%;right:-20%;width:60%;height:60%;background:radial-gradient(circle,rgba(255,255,255,0.08) 0%,transparent 70%);pointer-events:none;}
-.order-bg::after{content:'';position:absolute;bottom:-20%;left:-15%;width:50%;height:50%;background:radial-gradient(circle,rgba(92,61,46,0.06) 0%,transparent 70%);pointer-events:none;}
+.order-bg{background:linear-gradient(160deg, #D4A9A9 0%, #C09090 40%, #B8868A 100%);position:relative;}
+.order-bg::before{content:'';position:fixed;top:-30%;right:-20%;width:60%;height:60%;background:radial-gradient(circle,rgba(255,255,255,0.08) 0%,transparent 70%);pointer-events:none;z-index:0;}
+.order-bg::after{content:'';position:fixed;bottom:-20%;left:-15%;width:50%;height:50%;background:radial-gradient(circle,rgba(92,61,46,0.06) 0%,transparent 70%);pointer-events:none;z-index:0;}
 .order-bg .logo-watermark{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:59.5%;height:59.5%;opacity:0.35;pointer-events:none;z-index:0;object-fit:contain;filter:brightness(1.3);}
 .order-bg>.section,.order-bg>.confirm-wrap{position:relative;z-index:1;}
 .section{max-width:640px;margin:0 auto;padding:36px 20px;}
@@ -243,11 +243,10 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
     </div>
 
     <div class="pickup-card">
-      <div class="card-header">Pickup Time</div>
+      <div class="card-header">Pre-Order Pick Up Time</div>
       <div class="slots-grid" id="pickupSlots" style="grid-template-columns:1fr;">
         <div class="slot" id="slot-early" onclick="selectSlot(this,'9:00 – 9:20 AM')">
-          <div style="font-weight:700;font-size:14px;color:var(--white);margin-bottom:4px;text-shadow:0 1px 2px rgba(62,39,35,0.1);">Pickup</div>
-          <div class="slot-time" style="font-size:12px;opacity:0.85;">9:00 – 9:20 AM</div>
+          <div style="font-weight:700;font-size:15px;color:var(--white);text-shadow:0 1px 2px rgba(62,39,35,0.1);">9:00 – 9:20 AM</div>
         </div>
       </div>
       <div id="slot-error" style="display:none;">Please choose a pickup time.</div>
