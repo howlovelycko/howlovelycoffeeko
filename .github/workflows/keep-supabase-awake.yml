@@ -1,0 +1,23 @@
+name: Keep Supabase awake
+
+# Pings the database every 3 days so the free-tier project never
+# pauses from inactivity (Supabase pauses after 7 quiet days).
+# The key below is the public anon key — it's already visible in
+# index.html, so this exposes nothing new.
+
+on:
+  schedule:
+    - cron: "0 8 */3 * *"   # every 3 days at 8:00 UTC
+  workflow_dispatch: {}      # allows manual run from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        run: |
+          curl -s -f \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tbmxvZmhhdnliemlrdnlma3N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMTgzOTMsImV4cCI6MjA5MDU5NDM5M30.hLu5DKWCV2Xt3_nBe9RKIm1-lY94oU_Vi1_Pphg5xnQ" \
+            -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tbmxvZmhhdnliemlrdnlma3N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMTgzOTMsImV4cCI6MjA5MDU5NDM5M30.hLu5DKWCV2Xt3_nBe9RKIm1-lY94oU_Vi1_Pphg5xnQ" \
+            "https://omnlofhavybzikvyfksu.supabase.co/rest/v1/settings?select=key&limit=1" \
+          && echo "Supabase pinged — project stays awake"
