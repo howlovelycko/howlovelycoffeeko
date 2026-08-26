@@ -21,8 +21,12 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
 /* ══ HERO — full bleed with logo centered ══ */
 .hero{background:var(--hero-bg);padding:44px 24px 18px;text-align:center;}
 .hero-logo{width:220px;height:auto;margin:0 auto 14px;display:block;}
-.hero-info{display:flex;align-items:center;justify-content:center;gap:16px;font-size:12px;color:var(--text-mid);letter-spacing:0.02em;}
+.hero-info{display:flex;align-items:center;justify-content:center;gap:16px;font-size:12px;color:var(--text-mid);letter-spacing:0.02em;flex-wrap:wrap;}
 .hero-info .divider{width:1px;height:14px;background:var(--brown-light);}
+
+/* ══ ANNOUNCEMENT BANNER (managed from admin page) ══ */
+.announce{margin:12px auto 0;max-width:400px;background:var(--pink-pale);border:1px solid var(--pink);border-radius:12px;padding:10px 14px;font-size:12px;color:var(--brown-dark);text-align:center;line-height:1.4;}
+.announce.closed{background:var(--cream);border-color:var(--cream-dark);}
 
 /* ══ BOTTOM NAV — iOS-style tab bar ══ */
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--cream-dark);display:flex;padding:8px 0 calc(8px + env(safe-area-inset-bottom));z-index:50;}
@@ -41,13 +45,19 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
 .grid-card{background:rgba(255,255,255,0.45);border-radius:20px;padding:20px 14px 14px;text-align:center;cursor:pointer;transition:transform 0.12s,box-shadow 0.2s;border:1px solid rgba(255,255,255,0.6);box-shadow:0 2px 10px rgba(92,61,46,0.06);position:relative;overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:1;}
 .grid-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;border-radius:20px 20px 0 0;}
 .grid-card[data-cat="hot"]::before{background:#C28B6B;}
-.grid-card[data-cat="cold"]::before{background:#8BAFBF;}
+.grid-card[data-cat="iced"]::before{background:#8BAFBF;}
+.grid-card[data-cat="choice"]::before{background:linear-gradient(90deg,#C28B6B 50%,#8BAFBF 50%);}
+.temp-tag{display:inline-block;font-size:9px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;border-radius:50px;padding:3px 10px;margin-bottom:6px;background:var(--cream);color:var(--text-mid);}
 .grid-card:active{transform:scale(0.97);box-shadow:0 4px 20px rgba(92,61,46,0.08);}
 .grid-num{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--brown);letter-spacing:0.02em;margin-bottom:4px;}
 .grid-name{font-weight:600;font-size:14px;color:var(--brown-dark);margin:4px 0 2px;line-height:1.2;}
 .grid-desc{font-size:11px;color:var(--brown-mid);line-height:1.3;margin-bottom:10px;}
 .grid-price{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:22px;color:var(--brown-dark);margin-bottom:10px;}
 .grid-card.hidden{display:none;}
+.grid-card.soldout{opacity:0.45;cursor:not-allowed;}
+.soldout-tag{display:inline-block;background:var(--brown-dark);color:var(--cream);font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;border-radius:50px;padding:4px 12px;margin-bottom:6px;}
+.menu-loading{grid-column:1/-1;text-align:center;padding:48px 20px;color:var(--text-soft);font-size:14px;z-index:1;position:relative;}
+.menu-loading button{margin-top:14px;background:var(--pink);color:var(--white);border:none;border-radius:50px;padding:12px 28px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;}
 
 /* ══ MODAL QUANTITY SELECTOR ══ */
 .modal-qty-row{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:22px;margin-bottom:4px;}
@@ -183,17 +193,10 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
 <div class="page active" id="page-menu">
   <div class="hero">
     <img class="hero-logo" src="logo.png" alt="How Lovely Coffee Ko."/>
-    <div class="hero-info">
-      <span>Father's Day</span>
-      <span class="divider"></span>
-      <span>Jun 21, 2026</span>
-      <span class="divider"></span>
-      <span>Cross Culture Church</span>
-    </div>
+    <!-- Event line + banners are rendered from Supabase settings (managed via admin.html) -->
+    <div class="hero-info" id="heroInfo" style="display:none;"></div>
     <div style="font-size:11px;color:var(--text-soft);margin-top:10px;letter-spacing:0.03em;">All drinks · 12oz · 2 espresso shots</div>
-    <div id="preserviceNotice" style="display:none;margin:12px auto 0;max-width:340px;background:var(--pink-pale);border:1px solid var(--pink);border-radius:12px;padding:10px 14px;font-size:12px;color:var(--brown-dark);text-align:center;line-height:1.4;">
-      ☕ Pre-orders close at <strong>10:00 PM on Sat, June 20th</strong>. Order early to guarantee your pickup!
-    </div>
+    <div id="bannerArea"></div>
   </div>
 
   <div class="filter-bar">
@@ -203,7 +206,7 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
   </div>
 
   <div class="menu-grid" id="menuGrid">
-    <!-- Rendered by JS from MENU array -->
+    <div class="menu-loading" id="menuLoading">Brewing up the menu…</div>
   </div>
 
   <!-- Floating cart button -->
@@ -259,11 +262,8 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
 
     <div class="pickup-card">
       <div class="card-header">Pre-Order Pick Up Time</div>
-      <div class="slots-grid" id="pickupSlots" style="grid-template-columns:1fr;">
-        <div class="slot" id="slot-early" onclick="selectSlot(this,'9:00 – 9:20 AM')">
-          <div style="font-weight:700;font-size:15px;color:var(--white);text-shadow:0 1px 2px rgba(62,39,35,0.1);">9:00 – 9:20 AM</div>
-        </div>
-      </div>
+      <!-- Slots come from the Supabase pickup_slots table (managed via admin.html) -->
+      <div class="slots-grid" id="pickupSlots" style="grid-template-columns:1fr;"></div>
       <div id="slot-error" style="display:none;">Please choose a pickup time.</div>
       <div id="slot-notice" style="display:none;font-size:12px;color:var(--brown-dark);background:var(--cream);border-radius:12px;padding:10px 14px;margin-top:8px;">Pre-orders have closed.</div>
     </div>
@@ -331,12 +331,16 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
     <div class="modal-title" id="modalName"></div>
     <div class="modal-price" id="modalPrice"></div>
     <div id="modalDesc" style="font-size:13px;color:var(--text-mid);margin-bottom:20px;line-height:1.4;"></div>
+    <div id="tempSection" style="margin-bottom:16px;display:none;">
+      <div class="custom-label">Temperature</div>
+      <div class="chip-row" id="tempChips"></div>
+    </div>
     <div id="milkSection" style="margin-bottom:16px;display:none;">
       <div class="custom-label">Milk</div>
       <div class="chip-row" id="milkChips"></div>
     </div>
     <div id="sweetenerSection" style="margin-bottom:16px;display:none;">
-      <div class="custom-label">Syrup</div>
+      <div class="custom-label">Sweetener</div>
       <div class="chip-row" id="sweetenerChips"></div>
     </div>
     <div class="modal-qty-row">
@@ -351,59 +355,171 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
 <div class="toast" id="toast"></div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════
+// BACKEND — Supabase powers the menu, settings, banners & orders.
+// All content is edited from admin.html (no code changes needed).
+// ═══════════════════════════════════════════════════════════════
 const SUPABASE_URL='https://omnlofhavybzikvyfksu.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tbmxvZmhhdnliemlrdnlma3N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMTgzOTMsImV4cCI6MjA5MDU5NDM5M30.hLu5DKWCV2Xt3_nBe9RKIm1-lY94oU_Vi1_Pphg5xnQ';
-const SHEETS_URL='';
-const EVENT_DATE='2026-06-21';
-const PRESERVICE_ORDER_CUTOFF=new Date('2026-06-20T22:00:00-07:00');
+const SHEETS_URL=''; // optional Google Sheets backup — paste Apps Script URL to enable
 
-const MENU=[
-  {id:'item1',num:1,name:'Latte',price:6.50,cat:'hot',desc:'Smooth espresso with steamed milk',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
-  {id:'item2',num:2,name:'Cappuccino',price:6.50,cat:'hot',desc:'Espresso topped with velvety foam',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
-  {id:'item3',num:3,name:'Americano',price:5,cat:'hot',desc:'Bold espresso with hot water',milk:null,sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
-  {id:'item4',num:4,name:'Chai Latte',price:6.50,cat:'hot',desc:'Spiced chai with steamed milk',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
-  {id:'item5',num:5,name:'The Usual (Bottled)',price:6.50,cat:'cold',desc:'Smooth agave sweetness with a warm cinnamon finish, served bottled.',milk:['Whole','Oat'],sweetener:null,sweetness:null},
-  {id:'item6',num:6,name:'Banana Cue (Bottled)',price:6.50,cat:'cold',desc:'Caramelized banana-inspired iced latte, served bottled.',milk:['Whole','Oat'],sweetener:null,sweetness:null},
-  {id:'item7',num:7,name:'Salted Coconut Cold Brew (Bottled)',price:6.50,cat:'cold',desc:'Cold brew with salted coconut cream, served bottled.',milk:['Whole','Oat'],sweetener:null,sweetness:null},
-  {id:'item8',num:8,name:'Raspberry Mocha (Bottled)',price:6.50,cat:'cold',desc:'Chocolate and raspberry over ice, served bottled.',milk:['Whole','Oat'],sweetener:null,sweetness:null},
-  {id:'item9',num:9,name:'Hot Chocolate',price:6,cat:'hot',desc:'Rich, cozy chocolate (caffeine-free)',milk:null,sweetener:null,sweetness:null},
-];
-
+let MENU=[],SETTINGS={},SLOTS=[],CUTOFF=null,ORDERING_OPEN=true,STORE_READY=false;
 let cart={},selectedSlot='',currentOrder=null,modalItem=null;
-let modalMilk='',modalSweetener='',modalSweetness='',modalQty=1;
+let modalMilk='',modalSweetener='',modalTemp='',modalQty=1;
 function safeId(str){return str.replace(/[^a-zA-Z0-9]/g,'').slice(0,40);}
 
-// ══ RENDER MENU (clean cards — no +/- on grid) ══
+// ══ SUPABASE HELPERS ══
+async function sbGet(path){
+  const r=await fetch(SUPABASE_URL+'/rest/v1/'+path,{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}});
+  if(!r.ok)throw new Error('Supabase '+r.status);
+  return r.json();
+}
+
+// ══ LOAD STORE (menu + settings + banners) ══
+async function loadStore(){
+  const grid=document.getElementById('menuGrid');
+  grid.innerHTML='<div class="menu-loading">Brewing up the menu…</div>';
+  try{
+    const [settingsRows,menuRows,slotRows,annRows]=await Promise.all([
+      sbGet('settings?select=key,value'),
+      sbGet('menu_items?select=*&active=is.true&order=sort_order.asc,id.asc'),
+      sbGet('pickup_slots?select=*&active=is.true&order=sort_order.asc,id.asc'),
+      sbGet('announcements?select=*&visible=is.true&order=created_at.desc')
+    ]);
+    SETTINGS={};settingsRows.forEach(r=>SETTINGS[r.key]=r.value);
+    SLOTS=slotRows;
+    MENU=menuRows.map((m,i)=>({
+      id:'item'+m.id,num:i+1,name:m.name,price:parseFloat(m.price),temp:m.temp_mode||'hot',desc:m.description,
+      milk:(Array.isArray(m.milk_options)&&m.milk_options.length)?m.milk_options:null,
+      sweetener:(Array.isArray(m.sweetener_options)&&m.sweetener_options.length)?m.sweetener_options:null,
+      soldOut:!!m.sold_out
+    }));
+    ORDERING_OPEN=SETTINGS.ordering_open!=='false';
+    CUTOFF=SETTINGS.cutoff_at?new Date(SETTINGS.cutoff_at):null;
+    if(CUTOFF&&isNaN(CUTOFF.getTime()))CUTOFF=null;
+    STORE_READY=true;
+    renderHero(annRows);
+    renderMenu();
+    renderSlots();
+    applyClosedState();
+  }catch(e){
+    console.error('Store load failed:',e);
+    grid.innerHTML='<div class="menu-loading">Hmm, the menu didn’t load. It may just be waking up — give it a moment.'+
+      '<br/><button onclick="loadStore()">Try Again</button></div>';
+  }
+}
+
+function isClosed(){
+  if(!STORE_READY)return true;
+  if(!ORDERING_OPEN)return true;
+  if(CUTOFF&&new Date()>=CUTOFF)return true;
+  return false;
+}
+
+// ══ HERO: event line + announcement banners ══
+function fmtDate(iso){
+  const d=new Date(iso+'T12:00:00');
+  if(isNaN(d.getTime()))return iso;
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+function fmtCutoff(dt){
+  return dt.toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+}
+function renderHero(announcements){
+  const info=document.getElementById('heroInfo');
+  const parts=[];
+  if(SETTINGS.event_name)parts.push(SETTINGS.event_name);
+  if(SETTINGS.event_date)parts.push(fmtDate(SETTINGS.event_date));
+  if(SETTINGS.location)parts.push(SETTINGS.location);
+  if(parts.length){
+    info.style.display='flex';
+    info.innerHTML=parts.map(p=>'<span>'+escapeHtml(p)+'</span>').join('<span class="divider"></span>');
+  }else{info.style.display='none';info.innerHTML='';}
+
+  const area=document.getElementById('bannerArea');
+  let html='';
+  (announcements||[]).forEach(a=>{html+='<div class="announce">'+escapeHtml(a.message)+'</div>';});
+  if(!isClosed()&&CUTOFF&&new Date()<CUTOFF){
+    html+='<div class="announce">☕ Pre-orders close at <strong>'+fmtCutoff(CUTOFF)+'</strong>. Order early to guarantee your pickup!</div>';
+  }
+  if(isClosed()){
+    html+='<div class="announce closed">'+escapeHtml(SETTINGS.closed_message||'Ordering is currently closed — check back soon!')+'</div>';
+  }
+  area.innerHTML=html;
+}
+function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ══ RENDER MENU (clean cards — tap opens modal) ══
 function renderMenu(){
   const grid=document.getElementById('menuGrid');grid.innerHTML='';
+  if(!MENU.length){grid.innerHTML='<div class="menu-loading">Menu coming soon!</div>';return;}
   MENU.forEach(d=>{
-    const card=document.createElement('div');card.className='grid-card';card.dataset.cat=d.cat;
-    card.onclick=()=>openModal(d);
+    const card=document.createElement('div');
+    card.className='grid-card'+(d.soldOut?' soldout':'');
+    card.dataset.cat=d.temp;
+    if(!d.soldOut)card.onclick=()=>openModal(d);
+    else card.onclick=()=>showToast(d.name+' is sold out!');
+    const tempTag=d.temp==='choice'?'<div class="temp-tag">Hot / Iced</div>':(d.temp==='iced'?'<div class="temp-tag">Iced</div>':'');
     card.innerHTML=
       '<div class="grid-num">#'+d.num+'</div>'+
-      '<div class="grid-name">'+d.name+'</div>'+
-      '<div class="grid-desc">'+d.desc+'</div>'+
+      '<div class="grid-name">'+escapeHtml(d.name)+'</div>'+
+      '<div class="grid-desc">'+escapeHtml(d.desc)+'</div>'+
+      (d.soldOut?'<div class="soldout-tag">Sold Out</div>':tempTag)+
       '<div class="grid-price">$'+d.price.toFixed(2)+'</div>';
     grid.appendChild(card);
   });
 }
 
+// ══ SLOTS (from pickup_slots table) ══
+function renderSlots(){
+  const grid=document.getElementById('pickupSlots');
+  grid.innerHTML='';
+  grid.style.gridTemplateColumns=SLOTS.length>1?'1fr 1fr':'1fr';
+  if(!SLOTS.length){
+    grid.style.gridTemplateColumns='1fr';
+    grid.innerHTML='<div class="slot" onclick="selectSlot(this,\'At the event\')"><div class="slot-time" style="font-weight:700;">At the event</div></div>';
+    return;
+  }
+  SLOTS.forEach(s=>{
+    const div=document.createElement('div');
+    div.className='slot';
+    div.onclick=()=>selectSlot(div,s.label);
+    div.innerHTML='<div class="slot-time" style="font-weight:700;">'+escapeHtml(s.label)+'</div>';
+    grid.appendChild(div);
+  });
+}
+function disableAllSlots(){
+  document.querySelectorAll('#pickupSlots .slot').forEach(s=>{s.classList.add('disabled');s.onclick=null;});
+  document.getElementById('slot-notice').style.display='block';
+}
+function applyClosedState(){
+  if(isClosed()){
+    disableAllSlots();
+    const orderNav=document.querySelectorAll('#page-menu .bnav')[1];
+    if(orderNav){orderNav.onclick=()=>showToast('Pre-orders are closed!');orderNav.style.opacity='0.5';}
+    document.getElementById('cartFab').onclick=()=>showToast('Pre-orders are closed!');
+  }
+}
+
 // ══ MODAL with quantity selector ══
 function openModal(d){
+  if(isClosed()){showToast('Pre-orders are closed!');return;}
   modalItem=d;modalQty=1;
-  modalMilk=d.milk?d.milk[0]:'';modalSweetener=d.sweetener?d.sweetener[0]:'';modalSweetness=d.sweetness?d.sweetness[0]:'';
+  modalMilk=d.milk?d.milk[0]:'';modalSweetener=d.sweetener?d.sweetener[0]:'';
+  modalTemp=d.temp==='choice'?'Hot':'';
   document.getElementById('modalName').textContent=d.name;
   document.getElementById('modalPrice').textContent='$'+d.price.toFixed(2);
   document.getElementById('modalDesc').textContent=d.desc;
   document.getElementById('modalQtyNum').textContent='1';
   updateModalBtn();
-  // Milk
+  const tempSec=document.getElementById('tempSection'),tempChips=document.getElementById('tempChips');
+  if(d.temp==='choice'){tempSec.style.display='block';tempChips.innerHTML=['Hot','Iced'].map((t,i)=>'<div class="chip'+(i===0?' selected':'')+'" onclick="selectChip(\'temp\',this,\''+t+'\')">'+t+'</div>').join('');}
+  else{tempSec.style.display='none';tempChips.innerHTML='';}
   const milkSec=document.getElementById('milkSection'),milkChips=document.getElementById('milkChips');
-  if(d.milk){milkSec.style.display='block';milkChips.innerHTML=d.milk.map((m,i)=>'<div class="chip'+(i===0?' selected':'')+'" onclick="selectChip(\'milk\',this,\''+m+'\')">'+m+'</div>').join('');}
+  if(d.milk){milkSec.style.display='block';milkChips.innerHTML=d.milk.map((m,i)=>'<div class="chip'+(i===0?' selected':'')+'" onclick="selectChip(\'milk\',this,\''+escapeHtml(m)+'\')">'+escapeHtml(m)+'</div>').join('');}
   else{milkSec.style.display='none';milkChips.innerHTML='';}
-  // Sweetener
   const sweetenerSec=document.getElementById('sweetenerSection'),sweetenerChips=document.getElementById('sweetenerChips');
-  if(d.sweetener){sweetenerSec.style.display='block';sweetenerChips.innerHTML=d.sweetener.map((s,i)=>'<div class="chip'+(i===0?' selected':'')+'" onclick="selectChip(\'sweetener\',this,\''+s+'\')">'+s+'</div>').join('');}
+  if(d.sweetener){sweetenerSec.style.display='block';sweetenerChips.innerHTML=d.sweetener.map((s,i)=>'<div class="chip'+(i===0?' selected':'')+'" onclick="selectChip(\'sweetener\',this,\''+escapeHtml(s)+'\')">'+escapeHtml(s)+'</div>').join('');}
   else{sweetenerSec.style.display='none';sweetenerChips.innerHTML='';}
   document.getElementById('modalOverlay').classList.add('open');
 }
@@ -414,7 +530,7 @@ function selectChip(group,el,value){
   el.classList.add('selected');
   if(group==='milk')modalMilk=value;
   if(group==='sweetener')modalSweetener=value;
-  if(group==='sweetness')modalSweetness=value;
+  if(group==='temp')modalTemp=value;
 }
 function modalQtyChange(delta){
   modalQty=Math.max(1,modalQty+delta);
@@ -424,19 +540,20 @@ function modalQtyChange(delta){
 function updateModalBtn(){
   if(!modalItem)return;
   const total=(modalItem.price*modalQty).toFixed(2);
-  document.getElementById('modalAddBtn').textContent='Add '+modalQty+' to Order \u2014 $'+total;
+  document.getElementById('modalAddBtn').textContent='Add '+modalQty+' to Order — $'+total;
 }
 
 function addToCartFromModal(){
   if(!modalItem)return;
   const d=modalItem;
-  const milk=d.milk?modalMilk:'—';const sweetener=d.sweetener?modalSweetener:'—';const sweetness=d.sweetness?modalSweetness:'—';
-  const key=d.name+'||'+milk+'||'+sweetener+'||'+sweetness;
-  if(!cart[key])cart[key]={name:d.name,price:d.price,qty:0,milk,sweetener,sweetness,id:d.id};
+  const milk=d.milk?modalMilk:'—';const sweetener=d.sweetener?modalSweetener:'—';
+  const temp=d.temp==='choice'?modalTemp:'—';
+  const key=d.name+'||'+temp+'||'+milk+'||'+sweetener;
+  if(!cart[key])cart[key]={name:d.name,price:d.price,qty:0,temp,milk,sweetener,id:d.id};
   cart[key].qty+=modalQty;
   renderCartBar();closeModal();
-  let label=[milk!=='—'?milk:'',sweetener!=='—'?sweetener:'',sweetness!=='—'?sweetness:''].filter(Boolean).join(' \u00b7 ');
-  showToast('Added '+modalQty+'\u00d7 '+d.name+(label?' ('+label+')':''));
+  let label=[temp!=='—'?temp:'',milk!=='—'?milk:'',sweetener!=='—'?sweetener:''].filter(Boolean).join(' · ');
+  showToast('Added '+modalQty+'× '+d.name+(label?' ('+label+')':''));
 }
 
 // ══ CART ══
@@ -458,7 +575,9 @@ function filterCat(cat,el){
   document.querySelectorAll('.filter-pill').forEach(p=>p.classList.remove('active'));
   el.classList.add('active');
   document.querySelectorAll('.grid-card').forEach(c=>{
-    if(cat==='all'||c.dataset.cat===cat)c.classList.remove('hidden');else c.classList.add('hidden');
+    const t=c.dataset.cat;
+    const show=cat==='all'||(cat==='hot'&&(t==='hot'||t==='choice'))||(cat==='cold'&&(t==='iced'||t==='choice'));
+    if(show)c.classList.remove('hidden');else c.classList.add('hidden');
   });
 }
 function goToOrder(){
@@ -473,19 +592,19 @@ function buildSummary(){
   const c=document.getElementById('summaryItems');c.innerHTML='';
   if(!cartCount()){c.innerHTML='<div style="color:var(--text-soft);font-size:13px;padding:8px 0;">No items yet!</div>';document.getElementById('summaryTotal').textContent='$0.00';return;}
   const group=document.createElement('div');group.className='summary-group';
-  Object.entries(cart).forEach(([key,{name,qty,price,milk,sweetener,sweetness}])=>{
+  Object.entries(cart).forEach(([key,{name,qty,price,temp,milk,sweetener}])=>{
     const row=document.createElement('div');row.className='cart-item';row.id='cart-'+safeId(key);
-    const details=[milk!=='—'?milk:'',sweetener!=='—'?sweetener:'',sweetness!=='—'?sweetness:''].filter(Boolean).join(' \u00b7 ');
+    const details=[temp&&temp!=='—'?temp:'',milk!=='—'?milk:'',sweetener!=='—'?sweetener:''].filter(Boolean).join(' · ');
     const safeKey=key.replace(/'/g,"\\'");
     row.innerHTML=
       '<div class="cart-item-top">'+
-        '<span class="cart-item-name">'+name+'</span>'+
+        '<span class="cart-item-name">'+escapeHtml(name)+'</span>'+
         '<span class="cart-item-sub" id="sub-'+safeId(key)+'">$'+(qty*price).toFixed(2)+'</span>'+
       '</div>'+
-      (details?'<div class="cart-item-details">'+details+'</div>':'')+
+      (details?'<div class="cart-item-details">'+escapeHtml(details)+'</div>':'')+
       '<div class="cart-item-bottom">'+
         '<div class="cart-qty-row">'+
-          '<button class="cart-qty-btn" onclick="adjustCartQty(\''+safeKey+'\',-1)">\u2212</button>'+
+          '<button class="cart-qty-btn" onclick="adjustCartQty(\''+safeKey+'\',-1)">−</button>'+
           '<span class="cart-qty-num" id="cqty-'+safeId(key)+'">'+qty+'</span>'+
           '<button class="cart-qty-btn" onclick="adjustCartQty(\''+safeKey+'\',1)">+</button>'+
         '</div>'+
@@ -506,7 +625,6 @@ function adjustCartQty(key,delta){
   }
   renderCartBar();
   if(!cartCount()){showToast('Cart is empty!');buildSummary();showPage('page-menu');return;}
-  // Real-time update without full rebuild
   if(cart[key]){
     const id=safeId(key);
     const subEl=document.getElementById('sub-'+id);
@@ -514,27 +632,24 @@ function adjustCartQty(key,delta){
     if(subEl)subEl.textContent='$'+(cart[key].qty*cart[key].price).toFixed(2);
     if(qtyEl)qtyEl.textContent=cart[key].qty;
   } else {
-    // Item was removed — rebuild summary
     buildSummary();return;
   }
   document.getElementById('summaryTotal').textContent='$'+cartTotal().toFixed(2);
 }
 
-// ══ SLOTS ══
-function initSlots(){
-  const now=new Date();
-  if(now>=PRESERVICE_ORDER_CUTOFF)disableSlot('slot-early');
+// ══ SLOT SELECTION ══
+function selectSlot(el,label){
+  if(el.classList.contains('disabled'))return;
+  document.querySelectorAll('#pickupSlots .slot').forEach(s=>{s.classList.remove('selected','error');});
+  el.classList.add('selected');
+  selectedSlot=label;
+  document.getElementById('slot-error').style.display='none';
 }
-function disableSlot(slotId){
-  const s=document.getElementById(slotId);
-  if(s){s.classList.add('disabled');s.onclick=null;document.getElementById('slot-notice').style.display='block';}
-}
-function selectSlot(el,slot){if(el.classList.contains('disabled'))return;document.querySelectorAll('#pickupSlots .slot').forEach(s=>{s.classList.remove('selected','error');});el.classList.add('selected');selectedSlot=slot;document.getElementById('slot-error').style.display='none';}
 
 // ══ SUBMIT ORDER ══
 function submitOrder(){
-  if(new Date()>=PRESERVICE_ORDER_CUTOFF){
-    disableSlot('slot-early');selectedSlot='';
+  if(isClosed()){
+    disableAllSlots();selectedSlot='';
     document.querySelectorAll('#pickupSlots .slot').forEach(s=>s.classList.remove('selected','error'));
     showToast('Pre-orders are now closed!');return;
   }
@@ -549,13 +664,13 @@ function submitOrder(){
   document.getElementById('slot-error').style.display='none';
   if(!cartCount()){showToast('Your cart is empty!');return;}
   const name=firstName+' '+lastName;
-  const lineItems=Object.values(cart).map(({name,qty,price,milk,sweetener,sweetness})=>{
-    const opts=[milk!=='—'?milk:'',sweetener!=='—'?sweetener:'',sweetness!=='—'?sweetness:''].filter(Boolean).join(' · ');
+  const lineItems=Object.values(cart).map(({name,qty,price,temp,milk,sweetener})=>{
+    const opts=[temp&&temp!=='—'?temp:'',milk!=='—'?milk:'',sweetener!=='—'?sweetener:''].filter(Boolean).join(' · ');
     return {qty:qty,name:name,opts:opts,lineTotal:(qty*price).toFixed(2)};
   });
   currentOrder={name,phone,slot:selectedSlot,paymentMethod:'',notes:'',lineItems:lineItems,
-    items:Object.values(cart).map(({name,qty,milk,sweetener,sweetness})=>{
-      const opts=[milk!=='—'?milk:'',sweetener!=='—'?sweetener:'',sweetness!=='—'?sweetness:''].filter(Boolean).join(', ');
+    items:Object.values(cart).map(({name,qty,temp,milk,sweetener})=>{
+      const opts=[temp&&temp!=='—'?temp:'',milk!=='—'?milk:'',sweetener!=='—'?sweetener:''].filter(Boolean).join(', ');
       return qty+'x '+name+(opts?' ('+opts+')':'');
     }).join(', '),
     total:cartTotal().toFixed(2),status:'pending',type:'preorder'};
@@ -566,13 +681,13 @@ function submitOrder(){
   document.getElementById('zelleCopiedMsg').style.display='none';
   document.getElementById('payStack').style.display='flex';
   document.getElementById('paySub').textContent='Send payment via Venmo or Zelle, then confirm below.';
-  document.getElementById('confirmPayBtn').textContent='I\u2019ve Paid \u2014 Confirm Order';
+  document.getElementById('confirmPayBtn').textContent='I’ve Paid — Confirm Order';
   sessionStorage.setItem('hlck_pending_order',JSON.stringify(currentOrder));
   window.scrollTo(0,0);
 }
 
 function backToOrderForm(){document.getElementById('paySection').style.display='none';document.getElementById('orderFormSection').style.display='block';window.scrollTo(0,0);}
-function handleZellePay(){navigator.clipboard.writeText('818-602-6103').catch(()=>{});document.getElementById('zelleIcon').innerHTML='\u2713';document.getElementById('zelleCopiedMsg').style.display='block';showToast('Zelle number copied!');}
+function handleZellePay(){navigator.clipboard.writeText('818-602-6103').catch(()=>{});document.getElementById('zelleIcon').innerHTML='✓';document.getElementById('zelleCopiedMsg').style.display='block';showToast('Zelle number copied!');}
 
 // ══ LOG & CONFIRM ══
 async function logToSheets(order){
@@ -580,8 +695,8 @@ async function logToSheets(order){
   if(SUPABASE_URL){
     try{
       const res=await fetch(SUPABASE_URL+'/rest/v1/orders',{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=minimal'},body:JSON.stringify(row)});
-      if(!res.ok){console.error('Supabase error:',res.status);showToast('Order saved locally \u2014 sync pending');}
-    }catch(e){console.error('Supabase error:',e);showToast('Order saved locally \u2014 sync pending');}
+      if(!res.ok){console.error('Supabase error:',res.status);showToast('Order saved locally — sync pending');}
+    }catch(e){console.error('Supabase error:',e);showToast('Order saved locally — sync pending');}
   }
   if(SHEETS_URL){fetch(SHEETS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(row)}).catch(()=>{});}
 }
@@ -598,8 +713,8 @@ async function confirmOrder(){
     : (currentOrder.items||'').split(/,\s+(?=\d+x\s)/).map(s=>({qty:'',name:s,opts:'',lineTotal:''}));
   const itemsHtml=li.map(it=>
     '<div class="co-line"><div>'+
-      '<div class="co-nm">'+(it.qty!==''?it.qty+'\u00d7 ':'')+it.name+'</div>'+
-      (it.opts?'<div class="co-op">'+it.opts+'</div>':'')+
+      '<div class="co-nm">'+(it.qty!==''?it.qty+'× ':'')+escapeHtml(it.name)+'</div>'+
+      (it.opts?'<div class="co-op">'+escapeHtml(it.opts)+'</div>':'')+
     '</div>'+
     (it.lineTotal?'<div class="co-pr">$'+it.lineTotal+'</div>':'')+
     '</div>'
@@ -608,14 +723,14 @@ async function confirmOrder(){
     '<div class="co-label">Order</div>'+
     '<div class="co-group">'+itemsHtml+'</div>'+
     '<div class="co-totstrip"><span class="co-tl">Total</span><span class="co-tv">$'+currentOrder.total+'</span></div>'+
-    '<div class="co-meta"><span>Pickup</span><strong>'+currentOrder.slot+'</strong></div>'+
-    '<div class="co-meta"><span>Name</span><strong>'+currentOrder.name+'</strong></div>';
+    '<div class="co-meta"><span>Pickup</span><strong>'+escapeHtml(currentOrder.slot)+'</strong></div>'+
+    '<div class="co-meta"><span>Name</span><strong>'+escapeHtml(currentOrder.name)+'</strong></div>';
   cart={};selectedSlot='';
   document.getElementById('custFirstName').value='';document.getElementById('custLastName').value='';document.getElementById('custPhone').value='';
   document.querySelectorAll('.slot').forEach(s=>s.classList.remove('selected','error'));
   renderCartBar();
   document.getElementById('orderFormSection').style.display='block';document.getElementById('paySection').style.display='none';
-  if(btn){btn.disabled=false;btn.textContent="I've Paid \u2014 Confirm Order";}
+  if(btn){btn.disabled=false;btn.textContent="I've Paid — Confirm Order";}
   currentOrder=null;showPage('page-confirm');
 }
 
@@ -625,18 +740,9 @@ function formatPhone(input){let val=input.value.replace(/\D/g,'');if(val.length>
 
 // ══ INIT ══
 window.addEventListener('load',()=>{
-  renderMenu();
+  loadStore();
   const saved=sessionStorage.getItem('hlck_pending_order');
-  if(saved){try{currentOrder=JSON.parse(saved);document.getElementById('payAmount').textContent='$'+currentOrder.total;document.getElementById('orderFormSection').style.display='none';document.getElementById('paySection').style.display='block';const btn=document.getElementById('confirmPayBtn');if(btn){btn.disabled=false;btn.textContent="I've Paid \u2014 Confirm Order";}showPage('page-order');}catch(e){sessionStorage.removeItem('hlck_pending_order');}}
-  initSlots();
-  const now=new Date();
-  // Show pre-service cutoff notice before the deadline
-  if(now<PRESERVICE_ORDER_CUTOFF){document.getElementById('preserviceNotice').style.display='block';}
-  if(now>=PRESERVICE_ORDER_CUTOFF){
-    document.querySelectorAll('.bnav')[1].onclick=()=>showToast('Pre-orders are now closed!');
-    document.querySelectorAll('.bnav')[1].style.opacity='0.5';
-    document.getElementById('cartFab').onclick=()=>showToast('Pre-orders are now closed!');
-  }
+  if(saved){try{currentOrder=JSON.parse(saved);document.getElementById('payAmount').textContent='$'+currentOrder.total;document.getElementById('orderFormSection').style.display='none';document.getElementById('paySection').style.display='block';const btn=document.getElementById('confirmPayBtn');if(btn){btn.disabled=false;btn.textContent="I've Paid — Confirm Order";}showPage('page-order');}catch(e){sessionStorage.removeItem('hlck_pending_order');}}
 });
 </script>
 </body>

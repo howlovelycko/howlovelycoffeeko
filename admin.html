@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HLCK Admin</title>
+<link rel="icon" href="favicon.png"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --brown:#5C3D2E; --brown-dark:#3E2723; --brown-mid:#8D6E63; --brown-light:#D7CCC8;
+  --cream:#F5F0EB; --cream-dark:#E8E0D8; --hero-bg:#EADDD1;
+  --pink:#C9A0A0; --pink-deep:#B8908F; --pink-pale:#F8EDED;
+  --white:#FFFBF7; --text:#3E2723; --text-mid:#6D4C41; --text-soft:#A1887F;
+  --green:#4CAF50; --red:#C62828;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:560px;margin:0 auto;padding:20px 16px 80px;}
+h1{font-family:'Cormorant Garamond',serif;font-size:28px;color:var(--brown-dark);}
+.sub{font-size:13px;color:var(--text-soft);margin-bottom:20px;}
+.card{background:var(--white);border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 2px 10px rgba(92,61,46,0.06);border:1px solid var(--cream-dark);}
+.card h2{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-soft);font-weight:600;margin-bottom:14px;}
+label{display:block;font-size:12px;font-weight:500;color:var(--text-mid);margin:10px 0 4px;}
+input[type=text],input[type=number],input[type=date],input[type=datetime-local],textarea{width:100%;border:1.5px solid var(--cream-dark);border-radius:12px;padding:12px 14px;font-family:'Outfit',sans-serif;font-size:15px;color:var(--brown-dark);outline:none;background:var(--white);}
+input:focus,textarea:focus{border-color:var(--pink);}
+textarea{resize:vertical;min-height:64px;}
+.btn{border:none;border-radius:50px;padding:13px 22px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.15s;}
+.btn:active{transform:scale(0.97);}
+.btn-pink{background:var(--pink);color:var(--white);}
+.btn-brown{background:var(--brown);color:var(--white);}
+.btn-ghost{background:var(--cream);color:var(--text-mid);}
+.btn-danger{background:#FDECEA;color:var(--red);}
+.btn-block{width:100%;margin-top:12px;}
+.btn-sm{padding:8px 14px;font-size:12px;}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.spacer{flex:1;}
+/* Big master switch */
+.master{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.master .m-label{font-size:15px;font-weight:600;color:var(--brown-dark);}
+.master .m-state{font-size:12px;color:var(--text-soft);margin-top:2px;}
+.switch{position:relative;width:60px;height:34px;flex-shrink:0;}
+.switch input{opacity:0;width:0;height:0;}
+.knob{position:absolute;inset:0;background:var(--cream-dark);border-radius:34px;cursor:pointer;transition:0.25s;}
+.knob::before{content:'';position:absolute;height:26px;width:26px;left:4px;top:4px;background:var(--white);border-radius:50%;transition:0.25s;box-shadow:0 1px 4px rgba(0,0,0,0.2);}
+.switch input:checked + .knob{background:var(--green);}
+.switch input:checked + .knob::before{transform:translateX(26px);}
+/* Menu item rows */
+.mi{border:1.5px solid var(--cream-dark);border-radius:14px;padding:14px;margin-bottom:10px;}
+.mi.soldout-row{opacity:0.6;}
+.mi-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.mi-name{font-weight:600;font-size:15px;color:var(--brown-dark);}
+.mi-price{font-weight:600;font-size:14px;color:var(--brown);white-space:nowrap;}
+.mi-desc{font-size:12px;color:var(--text-soft);margin-top:2px;}
+.mi-tags{font-size:11px;color:var(--text-mid);margin-top:4px;}
+.mi-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.pill{font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;border-radius:50px;padding:3px 10px;}
+.pill.hot{background:#F5E0D3;color:#A0642F;}
+.pill.cold{background:#DCE9EF;color:#3E7A96;}
+.pill.so{background:var(--brown-dark);color:var(--cream);}
+.pill.choice{background:var(--pink-pale);color:#993556;}
+/* Announcements */
+.ann{border:1.5px solid var(--cream-dark);border-radius:14px;padding:12px 14px;margin-bottom:10px;}
+.ann-msg{font-size:14px;color:var(--brown-dark);line-height:1.4;}
+.ann-meta{font-size:11px;color:var(--text-soft);margin-top:4px;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--brown-dark);color:var(--cream);border-radius:50px;padding:12px 24px;font-size:14px;font-weight:500;opacity:0;transition:all 0.3s;z-index:400;white-space:nowrap;pointer-events:none;}.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+/* PIN gate */
+#pinGate{position:fixed;inset:0;background:var(--cream);z-index:500;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:24px;}
+#pinGate img{width:180px;margin-bottom:20px;}
+#pinGate input{max-width:220px;text-align:center;font-size:22px;letter-spacing:0.3em;}
+#pinGate .hint{font-size:12px;color:var(--text-soft);margin-top:10px;}
+/* Modal editor */
+.overlay{position:fixed;inset:0;background:rgba(62,39,35,0.45);z-index:300;display:none;align-items:flex-end;justify-content:center;}
+.overlay.open{display:flex;}
+.sheet{background:var(--white);border-radius:24px 24px 0 0;width:100%;max-width:560px;padding:24px 20px calc(28px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto;}
+.sheet h3{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--brown-dark);margin-bottom:8px;}
+.opt-note{font-size:11px;color:var(--text-soft);margin-top:3px;}
+.seg{display:flex;gap:8px;margin-top:4px;}
+.seg .seg-btn{flex:1;border:1.5px solid var(--cream-dark);background:var(--white);border-radius:12px;padding:10px;font-size:13px;font-weight:500;color:var(--text-mid);cursor:pointer;text-align:center;}
+.seg .seg-btn.on{border-color:var(--pink);background:var(--pink-pale);color:var(--pink-deep);}
+</style>
+</head>
+<body>
+
+<!-- ══ PIN GATE ══ -->
+<div id="pinGate">
+  <img src="logo.png" alt="How Lovely Coffee Ko."/>
+  <input type="text" id="pinInput" inputmode="numeric" placeholder="PIN" maxlength="8" onkeydown="if(event.key==='Enter')checkPin()"/>
+  <button class="btn btn-pink" style="margin-top:14px;min-width:160px;" onclick="checkPin()">Enter</button>
+  <div class="hint" id="pinHint">Enter your admin PIN</div>
+</div>
+
+<div class="wrap" id="app" style="display:none;">
+  <h1>Store Admin</h1>
+  <div class="sub">Changes go live on the ordering site the moment you save. <a href="index.html" style="color:var(--pink-deep);">View site →</a></div>
+
+  <!-- ══ MASTER SWITCH ══ -->
+  <div class="card">
+    <div class="master">
+      <div>
+        <div class="m-label">Accepting Pre-Orders</div>
+        <div class="m-state" id="orderingState">…</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="orderingToggle" onchange="toggleOrdering(this.checked)"/>
+        <span class="knob"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- ══ EVENT DETAILS ══ -->
+  <div class="card">
+    <h2>Next Event</h2>
+    <label>Event name (shown under the logo — leave blank for none)</label>
+    <input type="text" id="setEventName" placeholder="e.g. Fall Pop-Up"/>
+    <label>Event date</label>
+    <input type="date" id="setEventDate"/>
+    <label>Pre-orders close at (leave blank for no auto-cutoff)</label>
+    <input type="datetime-local" id="setCutoff"/>
+    <label>Pickup time options (customers pick one)</label>
+    <div id="slotList"></div>
+    <div class="row" style="margin-top:6px;">
+      <input type="text" id="slotNew" placeholder="e.g. Before service · 9:00 – 9:20 AM" style="flex:1;min-width:180px;"/>
+      <button class="btn btn-pink btn-sm" onclick="addSlot()">Add</button>
+    </div>
+    <label>Location</label>
+    <input type="text" id="setLocation" placeholder="e.g. Cross Culture Church"/>
+    <label>Message shown when ordering is closed</label>
+    <textarea id="setClosedMsg"></textarea>
+    <button class="btn btn-brown btn-block" onclick="saveSettings()">Save Event Details</button>
+  </div>
+
+  <!-- ══ ANNOUNCEMENT BANNERS ══ -->
+  <div class="card">
+    <h2>Announcement Banner</h2>
+    <div id="annList"></div>
+    <label>New announcement</label>
+    <textarea id="annNew" placeholder="e.g. Special pop-up this Sunday! Pre-order by Saturday 10pm 💐"></textarea>
+    <button class="btn btn-pink btn-block" onclick="addAnnouncement()">Post Announcement</button>
+  </div>
+
+  <!-- ══ MENU ══ -->
+  <div class="card">
+    <h2>Menu</h2>
+    <div id="menuList"></div>
+    <button class="btn btn-pink btn-block" onclick="openEditor(null)">+ Add Drink</button>
+  </div>
+
+  <div style="text-align:center;font-size:11px;color:var(--text-soft);margin-top:8px;">How Lovely Coffee Ko. · Admin</div>
+</div>
+
+<!-- ══ DRINK EDITOR SHEET ══ -->
+<div class="overlay" id="editorOverlay">
+  <div class="sheet">
+    <h3 id="editorTitle">Edit Drink</h3>
+    <label>Name</label>
+    <input type="text" id="edName" placeholder="e.g. The Usual"/>
+    <label>Description</label>
+    <input type="text" id="edDesc" placeholder="e.g. Agave latte with cinnamon powder"/>
+    <label>Price ($)</label>
+    <input type="number" id="edPrice" step="0.25" min="0" placeholder="6.50"/>
+    <label>Temperature</label>
+    <div class="seg">
+      <div class="seg-btn" id="segHot" onclick="setTemp('hot')">Hot only</div>
+      <div class="seg-btn" id="segIced" onclick="setTemp('iced')">Iced only</div>
+      <div class="seg-btn" id="segChoice" onclick="setTemp('choice')">Customer's choice</div>
+    </div>
+    <div class="opt-note" id="tempNote">Customers will pick hot or iced when ordering.</div>
+    <label>Milk choices (comma-separated — blank = no milk choice)</label>
+    <input type="text" id="edMilk" placeholder="Whole, Oat"/>
+    <label>Sweetener choices (comma-separated — blank = none)</label>
+    <input type="text" id="edSweet" placeholder="Vanilla, SF Vanilla, Hazelnut"/>
+    <div class="opt-note">Customers pick one of each when ordering.</div>
+    <div class="row" style="margin-top:18px;">
+      <button class="btn btn-ghost" onclick="closeEditor()">Cancel</button>
+      <div class="spacer"></div>
+      <button class="btn btn-brown" id="editorSaveBtn" onclick="saveDrink()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// HLCK ADMIN — edits the same Supabase data index.html reads.
+// PIN is stored in the settings table (key: admin_pin).
+// ═══════════════════════════════════════════════════════════════
+const SUPABASE_URL='https://omnlofhavybzikvyfksu.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tbmxvZmhhdnliemlrdnlma3N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMTgzOTMsImV4cCI6MjA5MDU5NDM5M30.hLu5DKWCV2Xt3_nBe9RKIm1-lY94oU_Vi1_Pphg5xnQ';
+
+let SETTINGS={},MENU=[],ANNS=[],SLOTS=[],editingId=null,edTemp='hot';
+
+const HDRS={'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'};
+async function sbGet(path){const r=await fetch(SUPABASE_URL+'/rest/v1/'+path,{headers:HDRS});if(!r.ok)throw new Error('GET '+r.status);return r.json();}
+async function sbSend(method,path,body){const r=await fetch(SUPABASE_URL+'/rest/v1/'+path,{method,headers:{...HDRS,'Prefer':'return=minimal'},body:body?JSON.stringify(body):undefined});if(!r.ok)throw new Error(method+' '+r.status);}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
+
+// ══ PIN GATE ══
+async function checkPin(){
+  const entered=document.getElementById('pinInput').value.trim();
+  document.getElementById('pinHint').textContent='Checking…';
+  try{
+    const rows=await sbGet('settings?select=value&key=eq.admin_pin');
+    const pin=(rows[0]&&rows[0].value)||'1234';
+    if(entered===pin){
+      sessionStorage.setItem('hlck_admin_ok','1');
+      document.getElementById('pinGate').style.display='none';
+      document.getElementById('app').style.display='block';
+      loadAll();
+    }else{
+      document.getElementById('pinHint').textContent='Wrong PIN — try again';
+      document.getElementById('pinInput').value='';
+    }
+  }catch(e){
+    document.getElementById('pinHint').textContent='Couldn’t reach the database. It may be paused — open Supabase to wake it, then retry.';
+  }
+}
+
+// ══ LOAD ══
+async function loadAll(){
+  try{
+    const [settingsRows,menuRows,slotRows,annRows]=await Promise.all([
+      sbGet('settings?select=key,value'),
+      sbGet('menu_items?select=*&active=is.true&order=sort_order.asc,id.asc'),
+      sbGet('pickup_slots?select=*&active=is.true&order=sort_order.asc,id.asc'),
+      sbGet('announcements?select=*&order=created_at.desc')
+    ]);
+    SETTINGS={};settingsRows.forEach(r=>SETTINGS[r.key]=r.value);
+    MENU=menuRows;SLOTS=slotRows;ANNS=annRows;
+    renderSettings();renderSlots();renderMenu();renderAnns();
+  }catch(e){showToast('Load failed — is Supabase awake?');console.error(e);}
+}
+
+// ══ SETTINGS ══
+function renderSettings(){
+  const open=SETTINGS.ordering_open!=='false';
+  document.getElementById('orderingToggle').checked=open;
+  document.getElementById('orderingState').textContent=open?'Customers can order right now':'Ordering is OFF — site shows your closed message';
+  document.getElementById('setEventName').value=SETTINGS.event_name||'';
+  document.getElementById('setEventDate').value=SETTINGS.event_date||'';
+  document.getElementById('setCutoff').value=SETTINGS.cutoff_at||'';
+  document.getElementById('setLocation').value=SETTINGS.location||'';
+  document.getElementById('setClosedMsg').value=SETTINGS.closed_message||'';
+}
+async function setSetting(key,value){
+  await sbSend('POST','settings?on_conflict=key',{key,value});
+}
+async function toggleOrdering(on){
+  try{
+    await sbSend('PATCH','settings?key=eq.ordering_open',{value:on?'true':'false'});
+    SETTINGS.ordering_open=on?'true':'false';
+    renderSettings();
+    showToast(on?'Ordering is ON ✅':'Ordering is OFF');
+  }catch(e){showToast('Save failed');console.error(e);loadAll();}
+}
+async function saveSettings(){
+  try{
+    const pairs={
+      event_name:document.getElementById('setEventName').value.trim(),
+      event_date:document.getElementById('setEventDate').value,
+      cutoff_at:document.getElementById('setCutoff').value,
+      location:document.getElementById('setLocation').value.trim(),
+      closed_message:document.getElementById('setClosedMsg').value.trim()
+    };
+    for(const [key,value] of Object.entries(pairs)){
+      await sbSend('PATCH','settings?key=eq.'+key,{value});
+      SETTINGS[key]=value;
+    }
+    showToast('Event details saved ✅');
+  }catch(e){showToast('Save failed');console.error(e);}
+}
+
+// ══ PICKUP SLOTS ══
+function renderSlots(){
+  const el=document.getElementById('slotList');
+  if(!SLOTS.length){el.innerHTML='<div style="font-size:12px;color:var(--text-soft);margin:4px 0;">No pickup times yet — add one below.</div>';return;}
+  el.innerHTML=SLOTS.map(s=>
+    '<div class="row" style="border:1.5px solid var(--cream-dark);border-radius:10px;padding:8px 12px;margin-top:6px;">'+
+      '<span style="flex:1;font-size:13px;">'+esc(s.label)+'</span>'+
+      '<button class="btn btn-danger btn-sm" onclick="deleteSlot('+s.id+')">Remove</button>'+
+    '</div>'
+  ).join('');
+}
+async function addSlot(){
+  const label=document.getElementById('slotNew').value.trim();
+  if(!label){showToast('Type a pickup time first');return;}
+  try{
+    const sort=(SLOTS.length?Math.max(...SLOTS.map(s=>s.sort_order||0)):0)+1;
+    await sbSend('POST','pickup_slots',{label,sort_order:sort});
+    document.getElementById('slotNew').value='';
+    showToast('Pickup time added ✅');loadAll();
+  }catch(e){showToast('Add failed');console.error(e);}
+}
+async function deleteSlot(id){
+  if(SLOTS.length===1&&!confirm('This is the only pickup time — remove it anyway?'))return;
+  try{await sbSend('PATCH','pickup_slots?id=eq.'+id,{active:false});showToast('Removed');loadAll();}
+  catch(e){showToast('Remove failed');}
+}
+
+// ══ ANNOUNCEMENTS ══
+function renderAnns(){
+  const el=document.getElementById('annList');
+  if(!ANNS.length){el.innerHTML='<div style="font-size:12px;color:var(--text-soft);margin-bottom:6px;">No announcements yet.</div>';return;}
+  el.innerHTML=ANNS.map(a=>
+    '<div class="ann">'+
+      '<div class="ann-msg">'+esc(a.message)+'</div>'+
+      '<div class="ann-meta">'+(a.visible?'🟢 Showing on site':'⚪ Hidden')+'</div>'+
+      '<div class="mi-actions">'+
+        '<button class="btn btn-ghost btn-sm" onclick="toggleAnn('+a.id+','+(!a.visible)+')">'+(a.visible?'Hide':'Show')+'</button>'+
+        '<button class="btn btn-danger btn-sm" onclick="deleteAnn('+a.id+')">Delete</button>'+
+      '</div>'+
+    '</div>'
+  ).join('');
+}
+async function addAnnouncement(){
+  const msg=document.getElementById('annNew').value.trim();
+  if(!msg){showToast('Type a message first');return;}
+  try{
+    await sbSend('POST','announcements',{message:msg,visible:true});
+    document.getElementById('annNew').value='';
+    showToast('Announcement posted ✅');loadAll();
+  }catch(e){showToast('Post failed');console.error(e);}
+}
+async function toggleAnn(id,visible){
+  try{await sbSend('PATCH','announcements?id=eq.'+id,{visible});loadAll();}
+  catch(e){showToast('Update failed');}
+}
+async function deleteAnn(id){
+  if(!confirm('Delete this announcement?'))return;
+  try{await sbSend('DELETE','announcements?id=eq.'+id);showToast('Deleted');loadAll();}
+  catch(e){showToast('Delete failed');}
+}
+
+// ══ MENU ══
+function renderMenu(){
+  const el=document.getElementById('menuList');
+  if(!MENU.length){el.innerHTML='<div style="font-size:12px;color:var(--text-soft);margin-bottom:6px;">No drinks yet — add your first!</div>';return;}
+  el.innerHTML=MENU.map(m=>{
+    const milk=(m.milk_options||[]).join(', ');
+    const sweet=(m.sweetener_options||[]).join(', ');
+    return '<div class="mi'+(m.sold_out?' soldout-row':'')+'">'+
+      '<div class="mi-top">'+
+        '<span class="mi-name">'+esc(m.name)+'</span>'+
+        '<span class="mi-price">$'+parseFloat(m.price).toFixed(2)+'</span>'+
+      '</div>'+
+      '<div class="mi-desc">'+esc(m.description||'')+'</div>'+
+      '<div class="mi-tags">'+
+        '<span class="pill '+(m.temp_mode==='iced'?'cold':(m.temp_mode==='choice'?'choice':'hot'))+'">'+(m.temp_mode==='iced'?'Iced only':(m.temp_mode==='choice'?'Hot or iced':'Hot only'))+'</span> '+
+        (m.sold_out?'<span class="pill so">Sold Out</span> ':'')+
+        (milk?' Milk: '+esc(milk)+'.':'')+(sweet?' Sweeteners: '+esc(sweet)+'.':'')+
+      '</div>'+
+      '<div class="mi-actions">'+
+        '<button class="btn btn-ghost btn-sm" onclick="openEditor('+m.id+')">Edit</button>'+
+        '<button class="btn '+(m.sold_out?'btn-pink':'btn-ghost')+' btn-sm" onclick="toggleSoldOut('+m.id+','+(!m.sold_out)+')">'+(m.sold_out?'Back in Stock':'Mark Sold Out')+'</button>'+
+        '<button class="btn btn-danger btn-sm" onclick="removeDrink('+m.id+')">Remove</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+function setTemp(t){
+  edTemp=t;
+  document.getElementById('segHot').classList.toggle('on',t==='hot');
+  document.getElementById('segIced').classList.toggle('on',t==='iced');
+  document.getElementById('segChoice').classList.toggle('on',t==='choice');
+  document.getElementById('tempNote').style.display=t==='choice'?'block':'none';
+}
+function openEditor(id){
+  editingId=id;
+  const m=id?MENU.find(x=>x.id===id):null;
+  document.getElementById('editorTitle').textContent=m?'Edit Drink':'Add Drink';
+  document.getElementById('edName').value=m?m.name:'';
+  document.getElementById('edDesc').value=m?(m.description||''):'';
+  document.getElementById('edPrice').value=m?parseFloat(m.price):'6.50';
+  document.getElementById('edMilk').value=m?(m.milk_options||[]).join(', '):'Whole, Oat';
+  document.getElementById('edSweet').value=m?(m.sweetener_options||[]).join(', '):'';
+  setTemp(m?(m.temp_mode||'hot'):'hot');
+  document.getElementById('editorOverlay').classList.add('open');
+}
+function closeEditor(){document.getElementById('editorOverlay').classList.remove('open');editingId=null;}
+function parseList(str){return str.split(',').map(s=>s.trim()).filter(Boolean);}
+async function saveDrink(){
+  const name=document.getElementById('edName').value.trim();
+  const price=parseFloat(document.getElementById('edPrice').value);
+  if(!name){showToast('Name is required');return;}
+  if(isNaN(price)||price<0){showToast('Enter a valid price');return;}
+  const body={
+    name,description:document.getElementById('edDesc').value.trim(),price,
+    temp_mode:edTemp,
+    milk_options:parseList(document.getElementById('edMilk').value),
+    sweetener_options:parseList(document.getElementById('edSweet').value)
+  };
+  const btn=document.getElementById('editorSaveBtn');btn.disabled=true;btn.textContent='Saving…';
+  try{
+    if(editingId){await sbSend('PATCH','menu_items?id=eq.'+editingId,body);}
+    else{body.sort_order=(MENU.length?Math.max(...MENU.map(m=>m.sort_order||0)):0)+1;await sbSend('POST','menu_items',body);}
+    closeEditor();showToast('Saved ✅');loadAll();
+  }catch(e){showToast('Save failed');console.error(e);}
+  btn.disabled=false;btn.textContent='Save';
+}
+async function toggleSoldOut(id,soldOut){
+  try{await sbSend('PATCH','menu_items?id=eq.'+id,{sold_out:soldOut});loadAll();showToast(soldOut?'Marked sold out':'Back in stock ✅');}
+  catch(e){showToast('Update failed');}
+}
+async function removeDrink(id){
+  if(!confirm('Remove this drink from the menu? (You can re-add it later.)'))return;
+  try{await sbSend('PATCH','menu_items?id=eq.'+id,{active:false});showToast('Removed');loadAll();}
+  catch(e){showToast('Remove failed');}
+}
+
+// ══ INIT ══
+window.addEventListener('load',()=>{
+  if(sessionStorage.getItem('hlck_admin_ok')==='1'){
+    document.getElementById('pinGate').style.display='none';
+    document.getElementById('app').style.display='block';
+    loadAll();
+  }
+});
+</script>
+</body>
+</html>
