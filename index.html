@@ -47,7 +47,13 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
 .grid-card[data-cat="hot"]::before{background:#C28B6B;}
 .grid-card[data-cat="iced"]::before{background:#8BAFBF;}
 .grid-card[data-cat="choice"]::before{background:linear-gradient(90deg,#C28B6B 50%,#8BAFBF 50%);}
-.temp-tag{display:inline-block;font-size:9px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;border-radius:50px;padding:3px 10px;margin-bottom:6px;background:var(--cream);color:var(--text-mid);}
+.temp-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;letter-spacing:0.06em;border-radius:50px;padding:4px 12px;}
+.temp-badge.hot{background:#F5E0D3;color:#A0642F;}
+.temp-badge.iced{background:#DCE9EF;color:#3E7A96;}
+.temp-badge.pair-l{border-radius:50px 0 0 50px;padding-right:7px;}
+.temp-badge.pair-r{border-radius:0 50px 50px 0;padding-left:7px;}
+.temp-note{font-size:9px;color:var(--text-soft);margin-top:3px;}
+.temp-row{margin-bottom:8px;}
 .grid-card:active{transform:scale(0.97);box-shadow:0 4px 20px rgba(92,61,46,0.08);}
 .grid-num{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--brown);letter-spacing:0.02em;margin-bottom:4px;}
 .grid-name{font-weight:600;font-size:14px;color:var(--brown-dark);margin:4px 0 2px;line-height:1.2;}
@@ -284,7 +290,7 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
     <div class="order-sub" id="paySub">Send payment via Venmo or Zelle, then confirm below.</div>
 
     <div class="pay-stack" id="payStack">
-      <a href="https://venmo.com/Kim-Reyes-4" target="_blank" class="pay-card">
+      <a href="https://venmo.com/Kim-Reyes-4" target="_blank" rel="noopener" class="pay-card" id="venmoLink">
         <div class="pay-icon-circle venmo">V</div>
         <div class="pay-info">
           <div class="pay-name">Venmo</div>
@@ -460,7 +466,12 @@ function renderMenu(){
     card.dataset.cat=d.temp;
     if(!d.soldOut)card.onclick=()=>openModal(d);
     else card.onclick=()=>showToast(d.name+' is sold out!');
-    const tempTag=d.temp==='choice'?'<div class="temp-tag">Hot / Iced</div>':(d.temp==='iced'?'<div class="temp-tag">Iced</div>':'');
+    const SVG_HOT='<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C13.5 6 18 7.5 18 13a6 6 0 0 1-12 0C6 7.5 10.5 6 12 2z"/></svg>';
+    const SVG_ICE='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9"/></svg>';
+    let tempTag='';
+    if(d.temp==='hot')tempTag='<div class="temp-row"><span class="temp-badge hot">'+SVG_HOT+'HOT</span></div>';
+    else if(d.temp==='iced')tempTag='<div class="temp-row"><span class="temp-badge iced">'+SVG_ICE+'ICED</span></div>';
+    else if(d.temp==='choice')tempTag='<div class="temp-row"><span class="temp-badge hot pair-l">'+SVG_HOT+'HOT</span><span class="temp-badge iced pair-r">'+SVG_ICE+'ICED</span><div class="temp-note">you choose when ordering</div></div>';
     card.innerHTML=
       '<div class="grid-num">#'+d.num+'</div>'+
       '<div class="grid-name">'+escapeHtml(d.name)+'</div>'+
@@ -517,10 +528,10 @@ function openModal(d){
   if(d.temp==='choice'){tempSec.style.display='block';tempChips.innerHTML=['Hot','Iced'].map((t,i)=>'<div class="chip'+(i===0?' selected':'')+'" onclick="selectChip(\'temp\',this,\''+t+'\')">'+t+'</div>').join('');}
   else{tempSec.style.display='none';tempChips.innerHTML='';}
   const milkSec=document.getElementById('milkSection'),milkChips=document.getElementById('milkChips');
-  if(d.milk){milkSec.style.display='block';milkChips.innerHTML=d.milk.map((m,i)=>'<div class="chip'+(i===0?' selected':'')+'" onclick="selectChip(\'milk\',this,\''+escapeHtml(m)+'\')">'+escapeHtml(m)+'</div>').join('');}
+  if(d.milk){milkSec.style.display='block';milkChips.innerHTML=d.milk.map((m,i)=>'<div class="chip'+(i===0?' selected':'')+'" onclick="selectOpt(\'milk\',this,'+i+')">'+escapeHtml(m)+'</div>').join('');}
   else{milkSec.style.display='none';milkChips.innerHTML='';}
   const sweetenerSec=document.getElementById('sweetenerSection'),sweetenerChips=document.getElementById('sweetenerChips');
-  if(d.sweetener){sweetenerSec.style.display='block';sweetenerChips.innerHTML=d.sweetener.map((s,i)=>'<div class="chip'+(i===0?' selected':'')+'" onclick="selectChip(\'sweetener\',this,\''+escapeHtml(s)+'\')">'+escapeHtml(s)+'</div>').join('');}
+  if(d.sweetener){sweetenerSec.style.display='block';sweetenerChips.innerHTML=d.sweetener.map((s,i)=>'<div class="chip'+(i===0?' selected':'')+'" onclick="selectOpt(\'sweetener\',this,'+i+')">'+escapeHtml(s)+'</div>').join('');}
   else{sweetenerSec.style.display='none';sweetenerChips.innerHTML='';}
   document.getElementById('modalOverlay').classList.add('open');
 }
@@ -529,9 +540,14 @@ function closeModalOutside(e){if(e.target===document.getElementById('modalOverla
 function selectChip(group,el,value){
   el.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));
   el.classList.add('selected');
-  if(group==='milk')modalMilk=value;
-  if(group==='sweetener')modalSweetener=value;
   if(group==='temp')modalTemp=value;
+}
+function selectOpt(group,el,idx){
+  if(!modalItem)return;
+  el.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  if(group==='milk'&&modalItem.milk)modalMilk=modalItem.milk[idx];
+  if(group==='sweetener'&&modalItem.sweetener)modalSweetener=modalItem.sweetener[idx];
 }
 function modalQtyChange(delta){
   modalQty=Math.max(1,modalQty+delta);
@@ -676,6 +692,9 @@ function submitOrder(){
     }).join(', '),
     total:cartTotal().toFixed(2),status:'pending',type:'preorder'};
   document.getElementById('payAmount').textContent='$'+currentOrder.total;
+  // Venmo deep link — opens the app with amount + note pre-filled
+  const venmoNote='HLCK order – '+firstName+' '+lastName.charAt(0)+'.';
+  document.getElementById('venmoLink').href='https://venmo.com/Kim-Reyes-4?txn=pay&amount='+currentOrder.total+'&note='+encodeURIComponent(venmoNote);
   document.getElementById('orderFormSection').style.display='none';
   document.getElementById('paySection').style.display='block';
   document.getElementById('zelleIcon').innerHTML='Z';
@@ -743,7 +762,7 @@ function formatPhone(input){let val=input.value.replace(/\D/g,'');if(val.length>
 window.addEventListener('load',()=>{
   loadStore();
   const saved=sessionStorage.getItem('hlck_pending_order');
-  if(saved){try{currentOrder=JSON.parse(saved);document.getElementById('payAmount').textContent='$'+currentOrder.total;document.getElementById('orderFormSection').style.display='none';document.getElementById('paySection').style.display='block';const btn=document.getElementById('confirmPayBtn');if(btn){btn.disabled=false;btn.textContent="I've Paid — Confirm Order";}showPage('page-order');}catch(e){sessionStorage.removeItem('hlck_pending_order');}}
+  if(saved){try{currentOrder=JSON.parse(saved);document.getElementById('payAmount').textContent='$'+currentOrder.total;document.getElementById('venmoLink').href='https://venmo.com/Kim-Reyes-4?txn=pay&amount='+currentOrder.total+'&note='+encodeURIComponent('HLCK order – '+(currentOrder.name||''));document.getElementById('orderFormSection').style.display='none';document.getElementById('paySection').style.display='block';const btn=document.getElementById('confirmPayBtn');if(btn){btn.disabled=false;btn.textContent="I've Paid — Confirm Order";}showPage('page-order');}catch(e){sessionStorage.removeItem('hlck_pending_order');}}
 });
 </script>
 </body>

@@ -59,6 +59,16 @@ textarea{resize:vertical;min-height:64px;}
 .pill.cold{background:#DCE9EF;color:#3E7A96;}
 .pill.so{background:var(--brown-dark);color:var(--cream);}
 .pill.choice{background:var(--pink-pale);color:#993556;}
+/* Option chips in drink editor */
+.chip-wrap{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+.opt-chip{border:1.5px solid var(--cream-dark);background:var(--white);color:var(--text-mid);border-radius:50px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;user-select:none;transition:all 0.15s;}
+.opt-chip.on{border-color:var(--pink);background:var(--pink-pale);color:#993556;}
+.opt-chip.add{border-style:dashed;color:var(--text-soft);}
+/* Removed drinks section */
+.removed-row{display:flex;align-items:center;gap:8px;border:1.5px dashed var(--cream-dark);border-radius:12px;padding:10px 12px;margin-top:8px;}
+.removed-row .rname{flex:1;font-size:13px;color:var(--text-mid);}
+details.removed summary{cursor:pointer;font-size:12px;color:var(--text-soft);padding:10px 0 2px;list-style:none;}
+details.removed summary::-webkit-details-marker{display:none;}
 /* Announcements */
 .ann{border:1.5px solid var(--cream-dark);border-radius:14px;padding:12px 14px;margin-bottom:10px;}
 .ann-msg{font-size:14px;color:var(--brown-dark);line-height:1.4;}
@@ -144,6 +154,7 @@ textarea{resize:vertical;min-height:64px;}
     <h2>Menu</h2>
     <div id="menuList"></div>
     <button class="btn btn-pink btn-block" onclick="openEditor(null)">+ Add Drink</button>
+    <div id="removedWrap"></div>
   </div>
 
   <div style="text-align:center;font-size:11px;color:var(--text-soft);margin-top:8px;">How Lovely Coffee Ko. · Admin</div>
@@ -166,11 +177,11 @@ textarea{resize:vertical;min-height:64px;}
       <div class="seg-btn" id="segChoice" onclick="setTemp('choice')">Customer's choice</div>
     </div>
     <div class="opt-note" id="tempNote">Customers will pick hot or iced when ordering.</div>
-    <label>Milk choices (comma-separated — blank = no milk choice)</label>
-    <input type="text" id="edMilk" placeholder="Whole, Oat"/>
-    <label>Sweetener choices (comma-separated — blank = none)</label>
-    <input type="text" id="edSweet" placeholder="Vanilla, SF Vanilla, Hazelnut"/>
-    <div class="opt-note">Customers pick one of each when ordering.</div>
+    <label>Milk choices (tap to toggle on/off)</label>
+    <div class="chip-wrap" id="edMilkChips"></div>
+    <label>Sweetener choices (tap to toggle on/off)</label>
+    <div class="chip-wrap" id="edSweetChips"></div>
+    <div class="opt-note">Highlighted = offered on this drink. Tap "+ add" to create a new option for all drinks. Customers pick one of each when ordering.</div>
     <div class="row" style="margin-top:18px;">
       <button class="btn btn-ghost" onclick="closeEditor()">Cancel</button>
       <div class="spacer"></div>
@@ -189,7 +200,8 @@ textarea{resize:vertical;min-height:64px;}
 const SUPABASE_URL='https://omnlofhavybzikvyfksu.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tbmxvZmhhdnliemlrdnlma3N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMTgzOTMsImV4cCI6MjA5MDU5NDM5M30.hLu5DKWCV2Xt3_nBe9RKIm1-lY94oU_Vi1_Pphg5xnQ';
 
-let SETTINGS={},MENU=[],ANNS=[],SLOTS=[],editingId=null,edTemp='hot';
+let SETTINGS={},MENU=[],REMOVED=[],ANNS=[],SLOTS=[],editingId=null,edTemp='hot';
+let edMilkSel=[],edSweetSel=[];
 
 const HDRS={'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'};
 async function sbGet(path){const r=await fetch(SUPABASE_URL+'/rest/v1/'+path,{headers:HDRS});if(!r.ok)throw new Error('GET '+r.status);return r.json();}
@@ -223,13 +235,18 @@ async function loadAll(){
   try{
     const [settingsRows,menuRows,slotRows,annRows]=await Promise.all([
       sbGet('settings?select=key,value'),
-      sbGet('menu_items?select=*&active=is.true&order=sort_order.asc,id.asc'),
+      sbGet('menu_items?select=*&order=sort_order.asc,id.asc'),
       sbGet('pickup_slots?select=*&active=is.true&order=sort_order.asc,id.asc'),
       sbGet('announcements?select=*&order=created_at.desc')
     ]);
     SETTINGS={};settingsRows.forEach(r=>SETTINGS[r.key]=r.value);
-    MENU=menuRows;SLOTS=slotRows;ANNS=annRows;
-    renderSettings();renderSlots();renderMenu();renderAnns();
+    // Self-heal: create master option lists on first run (no SQL re-run needed)
+    if(SETTINGS.milk_list===undefined){SETTINGS.milk_list='Whole, Oat';sbSend('POST','settings',{key:'milk_list',value:SETTINGS.milk_list}).catch(()=>{});}
+    if(SETTINGS.sweetener_list===undefined){SETTINGS.sweetener_list='Vanilla, SF Vanilla, Hazelnut';sbSend('POST','settings',{key:'sweetener_list',value:SETTINGS.sweetener_list}).catch(()=>{});}
+    MENU=menuRows.filter(m=>m.active);
+    REMOVED=menuRows.filter(m=>!m.active);
+    SLOTS=slotRows;ANNS=annRows;
+    renderSettings();renderSlots();renderMenu();renderRemoved();renderAnns();
   }catch(e){showToast('Load failed — is Supabase awake?');console.error(e);}
 }
 
@@ -359,6 +376,68 @@ function renderMenu(){
     '</div>';
   }).join('');
 }
+// ══ REMOVED DRINKS (restore / delete forever) ══
+function renderRemoved(){
+  const el=document.getElementById('removedWrap');
+  if(!REMOVED.length){el.innerHTML='';return;}
+  el.innerHTML='<details class="removed"><summary>▸ Removed drinks ('+REMOVED.length+') — tap to view &amp; restore</summary>'+
+    REMOVED.map(m=>
+      '<div class="removed-row">'+
+        '<span class="rname">'+esc(m.name)+' · $'+parseFloat(m.price).toFixed(2)+'</span>'+
+        '<button class="btn btn-pink btn-sm" onclick="restoreDrink('+m.id+')">Restore</button>'+
+        '<button class="btn btn-danger btn-sm" onclick="purgeDrink('+m.id+')">Delete forever</button>'+
+      '</div>'
+    ).join('')+'</details>';
+}
+async function restoreDrink(id){
+  try{await sbSend('PATCH','menu_items?id=eq.'+id,{active:true});showToast('Restored to menu ✅');loadAll();}
+  catch(e){showToast('Restore failed');}
+}
+async function purgeDrink(id){
+  if(!confirm('Permanently delete this drink? This CANNOT be undone.'))return;
+  try{await sbSend('DELETE','menu_items?id=eq.'+id);showToast('Deleted forever');loadAll();}
+  catch(e){showToast('Delete failed');}
+}
+
+// ══ OPTION CHIPS (milk / sweetener toggles) ══
+function masterList(group){
+  return parseList(group==='milk'?(SETTINGS.milk_list||''):(SETTINGS.sweetener_list||''));
+}
+let EDOPTS={milk:[],sweetener:[]};
+function renderOptChips(group){
+  const sel=group==='milk'?edMilkSel:edSweetSel;
+  const el=document.getElementById(group==='milk'?'edMilkChips':'edSweetChips');
+  const opts=[...masterList(group)];
+  sel.forEach(v=>{if(!opts.includes(v))opts.push(v);});
+  EDOPTS[group]=opts;
+  el.innerHTML=opts.map((o,i)=>{
+    const on=sel.includes(o);
+    return '<span class="opt-chip'+(on?' on':'')+'" onclick="toggleOpt(\''+group+'\','+i+')">'+(on?'✓ ':'')+esc(o)+'</span>';
+  }).join('')+'<span class="opt-chip add" onclick="addOption(\''+group+'\')">+ add</span>';
+}
+function toggleOpt(group,idx){
+  const val=EDOPTS[group][idx];
+  if(val===undefined)return;
+  const sel=group==='milk'?edMilkSel:edSweetSel;
+  const i=sel.indexOf(val);
+  if(i>=0)sel.splice(i,1);else sel.push(val);
+  renderOptChips(group);
+}
+async function addOption(group){
+  const v=(prompt('New '+(group==='milk'?'milk':'sweetener')+' option (e.g. Almond):')||'').trim();
+  if(!v)return;
+  const key=group==='milk'?'milk_list':'sweetener_list';
+  const list=masterList(group);
+  if(!list.includes(v)){
+    list.push(v);
+    SETTINGS[key]=list.join(', ');
+    try{await sbSend('PATCH','settings?key=eq.'+key,{value:SETTINGS[key]});}catch(e){showToast('Save failed');}
+  }
+  const sel=group==='milk'?edMilkSel:edSweetSel;
+  if(!sel.includes(v))sel.push(v);
+  renderOptChips(group);
+}
+
 function setTemp(t){
   edTemp=t;
   document.getElementById('segHot').classList.toggle('on',t==='hot');
@@ -373,8 +452,9 @@ function openEditor(id){
   document.getElementById('edName').value=m?m.name:'';
   document.getElementById('edDesc').value=m?(m.description||''):'';
   document.getElementById('edPrice').value=m?parseFloat(m.price):'6.50';
-  document.getElementById('edMilk').value=m?(m.milk_options||[]).join(', '):'Whole, Oat';
-  document.getElementById('edSweet').value=m?(m.sweetener_options||[]).join(', '):'';
+  edMilkSel=m?(m.milk_options||[]).slice():masterList('milk');
+  edSweetSel=m?(m.sweetener_options||[]).slice():masterList('sweetener');
+  renderOptChips('milk');renderOptChips('sweetener');
   setTemp(m?(m.temp_mode||'hot'):'hot');
   document.getElementById('editorOverlay').classList.add('open');
 }
@@ -388,8 +468,8 @@ async function saveDrink(){
   const body={
     name,description:document.getElementById('edDesc').value.trim(),price,
     temp_mode:edTemp,
-    milk_options:parseList(document.getElementById('edMilk').value),
-    sweetener_options:parseList(document.getElementById('edSweet').value)
+    milk_options:edMilkSel.slice(),
+    sweetener_options:edSweetSel.slice()
   };
   const btn=document.getElementById('editorSaveBtn');btn.disabled=true;btn.textContent='Saving…';
   try{
