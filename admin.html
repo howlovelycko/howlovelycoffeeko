@@ -64,6 +64,18 @@ textarea{resize:vertical;min-height:64px;}
 .opt-chip{border:1.5px solid var(--cream-dark);background:var(--white);color:var(--text-mid);border-radius:50px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;user-select:none;transition:all 0.15s;}
 .opt-chip.on{border-color:var(--pink);background:var(--pink-pale);color:#993556;}
 .opt-chip.add{border-style:dashed;color:var(--text-soft);}
+/* Reorder + specials */
+.mi-num{min-width:22px;height:22px;border-radius:50%;background:var(--cream-dark);color:var(--brown);font-size:11px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+.mi.feat{border-color:var(--pink);background:var(--pink-pale);}
+.mi.feat .mi-num{background:#D4537E;color:#fff;}
+.star-btn{cursor:pointer;font-size:17px;color:var(--brown-light);user-select:none;padding:0 2px;}
+.star-btn.on{color:#D4537E;}
+.drag-h{cursor:grab;color:var(--text-soft);font-size:17px;user-select:none;padding:0 2px;touch-action:none;}
+.sortable-ghost{opacity:0.4;}
+.group-label{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;font-weight:600;margin:10px 0 6px;color:var(--text-soft);}
+.group-label.sp{color:#993556;}
+.icon-chip{border:1.5px solid var(--cream-dark);background:var(--white);border-radius:12px;padding:8px 10px;cursor:pointer;color:var(--text-mid);display:inline-flex;align-items:center;justify-content:center;}
+.icon-chip.on{border-color:var(--pink);background:var(--pink-pale);color:#993556;}
 /* Removed drinks section */
 .removed-row{display:flex;align-items:center;gap:8px;border:1.5px dashed var(--cream-dark);border-radius:12px;padding:10px 12px;margin-top:8px;}
 .removed-row .rname{flex:1;font-size:13px;color:var(--text-mid);}
@@ -135,6 +147,10 @@ details.removed summary::-webkit-details-marker{display:none;}
     </div>
     <label>Location</label>
     <input type="text" id="setLocation" placeholder="e.g. Cross Culture Church"/>
+    <label>Specials section title (shown above starred ★ drinks — emoji ok)</label>
+    <input type="text" id="setSpecialTitle" placeholder="e.g. Christmas Menu"/>
+    <label>Specials icon (drawn beside the title)</label>
+    <div class="chip-wrap" id="iconPicker"></div>
     <label>Message shown when ordering is closed</label>
     <textarea id="setClosedMsg"></textarea>
     <button class="btn btn-brown btn-block" onclick="saveSettings()">Save Event Details</button>
@@ -152,7 +168,11 @@ details.removed summary::-webkit-details-marker{display:none;}
   <!-- ══ MENU ══ -->
   <div class="card">
     <h2>Menu</h2>
-    <div id="menuList"></div>
+    <div class="group-label sp" id="specialGroupLabel" style="display:none;margin-top:0;">✨ Specials — show first</div>
+    <div id="specialList"></div>
+    <div class="group-label" id="regularGroupLabel" style="margin-top:0;">Regular menu</div>
+    <div id="regularList"></div>
+    <div style="font-size:11px;color:var(--text-soft);margin:4px 0 2px;">Hold ≡ to drag into a new order · tap ★ to feature a drink</div>
     <button class="btn btn-pink btn-block" onclick="openEditor(null)">+ Add Drink</button>
     <div id="removedWrap"></div>
   </div>
@@ -192,6 +212,7 @@ details.removed summary::-webkit-details-marker{display:none;}
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
 // HLCK ADMIN — edits the same Supabase data index.html reads.
@@ -201,7 +222,36 @@ const SUPABASE_URL='https://omnlofhavybzikvyfksu.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tbmxvZmhhdnliemlrdnlma3N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMTgzOTMsImV4cCI6MjA5MDU5NDM5M30.hLu5DKWCV2Xt3_nBe9RKIm1-lY94oU_Vi1_Pphg5xnQ';
 
 let SETTINGS={},MENU=[],REMOVED=[],ANNS=[],SLOTS=[],editingId=null,edTemp='hot';
-let edMilkSel=[],edSweetSel=[];
+let edMilkSel=[],edSweetSel=[],PICKED_ICON='sparkle',sortSpecial=null,sortRegular=null;
+
+// ══ SECTION ICONS (same set the customer site renders) ══
+const ICONS={
+  sparkle:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
+  star:'<path d="M12 3l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6L3.2 9.4l6.1-.8z"/>',
+  heart:'<path d="M12 20s-7-4.5-9-9c-1.2-2.8.8-6 4-6 2 0 3.5 1.2 5 3 1.5-1.8 3-3 5-3 3.2 0 5.2 3.2 4 6-2 4.5-9 9-9 9z"/>',
+  snowflake:'<path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9"/>',
+  flower:'<circle cx="12" cy="12" r="2.5"/><path d="M12 4.5c1.8 0 2.6 2.2 1.3 3.4L12 9l-1.3-1.1C9.4 6.7 10.2 4.5 12 4.5zM19.5 12c0 1.8-2.2 2.6-3.4 1.3L15 12l1.1-1.3c1.2-1.3 3.4-.5 3.4 1.3zM12 19.5c-1.8 0-2.6-2.2-1.3-3.4L12 15l1.3 1.1c1.2 1.2.5 3.4-1.3 3.4zM4.5 12c0-1.8 2.2-2.6 3.4-1.3L9 12l-1.1 1.3C6.7 14.6 4.5 13.8 4.5 12z"/>',
+  leaf:'<path d="M6 18C6 10 12 4 20 4c0 8-6 14-14 14zM6 18c0-4 2-8 6-10"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/>',
+  coffee:'<path d="M5 9h11v8a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z"/><path d="M16 10h2a2.5 2.5 0 0 1 0 5h-2M7.5 5.5c0-1 .8-1 .8-2M11 5.5c0-1 .8-1 .8-2"/>',
+  gift:'<rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M4 13h16M12 9v11M12 9c-2 0-4-1-4-3 0-1.5 1-2.5 2.2-2.5C11.8 3.5 12 6 12 9zm0 0c2 0 4-1 4-3 0-1.5-1-2.5-2.2-2.5C12.2 3.5 12 6 12 9z"/>',
+  candycane:'<path d="M9 20V8a4 4 0 0 1 8 0"/><path d="M9 12l3-2M9 16l3-2"/>',
+  moon:'<path d="M19 13.5A7.5 7.5 0 0 1 10.5 5 7.5 7.5 0 1 0 19 13.5z"/>',
+  blossom:'<circle cx="12" cy="12" r="1.6"/><path d="M12 10.4c-.6-2 .2-4.2 2-5.4 1 1.9.8 4.2-.6 5.8M13.6 12c2-.6 4.2.2 5.4 2-1.9 1-4.2.8-5.8-.6M12 13.6c.6 2-.2 4.2-2 5.4-1-1.9-.8-4.2.6-5.8M10.4 12c-2 .6-4.2-.2-5.4-2 1.9-1 4.2-.8 5.8.6"/>'
+};
+function iconSvg(name,size,color){
+  const p=ICONS[name];if(!p)return'';
+  return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>';
+}
+function renderIconPicker(){
+  const el=document.getElementById('iconPicker');
+  const names=Object.keys(ICONS).concat(['none']);
+  el.innerHTML=names.map(n=>
+    '<span class="icon-chip'+(PICKED_ICON===n?' on':'')+'" onclick="pickIcon(\''+n+'\')" title="'+n+'">'+
+    (n==='none'?'<span style="font-size:11px;">none</span>':iconSvg(n,20,'currentColor'))+'</span>'
+  ).join('');
+}
+function pickIcon(n){PICKED_ICON=n;renderIconPicker();}
 
 const HDRS={'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'};
 async function sbGet(path){const r=await fetch(SUPABASE_URL+'/rest/v1/'+path,{headers:HDRS});if(!r.ok)throw new Error('GET '+r.status);return r.json();}
@@ -243,6 +293,8 @@ async function loadAll(){
     // Self-heal: create master option lists on first run (no SQL re-run needed)
     if(SETTINGS.milk_list===undefined){SETTINGS.milk_list='Whole, Oat';sbSend('POST','settings',{key:'milk_list',value:SETTINGS.milk_list}).catch(()=>{});}
     if(SETTINGS.sweetener_list===undefined){SETTINGS.sweetener_list='Vanilla, SF Vanilla, Hazelnut';sbSend('POST','settings',{key:'sweetener_list',value:SETTINGS.sweetener_list}).catch(()=>{});}
+    if(SETTINGS.special_title===undefined){SETTINGS.special_title='';sbSend('POST','settings',{key:'special_title',value:''}).catch(()=>{});}
+    if(SETTINGS.special_icon===undefined){SETTINGS.special_icon='sparkle';sbSend('POST','settings',{key:'special_icon',value:'sparkle'}).catch(()=>{});}
     MENU=menuRows.filter(m=>m.active);
     REMOVED=menuRows.filter(m=>!m.active);
     SLOTS=slotRows;ANNS=annRows;
@@ -254,12 +306,19 @@ async function loadAll(){
 function renderSettings(){
   const open=SETTINGS.ordering_open!=='false';
   document.getElementById('orderingToggle').checked=open;
-  document.getElementById('orderingState').textContent=open?'Customers can order right now':'Ordering is OFF — site shows your closed message';
+  const cutoffPast=SETTINGS.cutoff_at&&new Date(SETTINGS.cutoff_at)<new Date();
+  let state=open?'Customers can order right now':'Ordering is OFF — site shows your closed message';
+  if(open&&cutoffPast)state='⚠️ The switch is ON but your pre-order cutoff has already passed — customers CANNOT order. Update or clear the cutoff below.';
+  document.getElementById('orderingState').textContent=state;
+  document.getElementById('orderingState').style.color=(open&&cutoffPast)?'#C62828':'';
   document.getElementById('setEventName').value=SETTINGS.event_name||'';
   document.getElementById('setEventDate').value=SETTINGS.event_date||'';
   document.getElementById('setCutoff').value=SETTINGS.cutoff_at||'';
   document.getElementById('setLocation').value=SETTINGS.location||'';
   document.getElementById('setClosedMsg').value=SETTINGS.closed_message||'';
+  document.getElementById('setSpecialTitle').value=SETTINGS.special_title||'';
+  PICKED_ICON=SETTINGS.special_icon||'sparkle';
+  renderIconPicker();
 }
 async function setSetting(key,value){
   await sbSend('POST','settings?on_conflict=key',{key,value});
@@ -279,7 +338,9 @@ async function saveSettings(){
       event_date:document.getElementById('setEventDate').value,
       cutoff_at:document.getElementById('setCutoff').value,
       location:document.getElementById('setLocation').value.trim(),
-      closed_message:document.getElementById('setClosedMsg').value.trim()
+      closed_message:document.getElementById('setClosedMsg').value.trim(),
+      special_title:document.getElementById('setSpecialTitle').value.trim(),
+      special_icon:PICKED_ICON
     };
     for(const [key,value] of Object.entries(pairs)){
       await sbSend('PATCH','settings?key=eq.'+key,{value});
@@ -351,30 +412,69 @@ async function deleteAnn(id){
 }
 
 // ══ MENU ══
+function drinkRow(m,num,canDrag){
+  const milk=(m.milk_options||[]).join(', ');
+  const sweet=(m.sweetener_options||[]).join(', ');
+  const arrows=canDrag?'':(
+    '<button class="btn btn-ghost btn-sm" onclick="moveRow('+m.id+',-1)">▲</button>'+
+    '<button class="btn btn-ghost btn-sm" onclick="moveRow('+m.id+',1)">▼</button>');
+  return '<div class="mi'+(m.sold_out?' soldout-row':'')+(m.featured?' feat':'')+'" data-id="'+m.id+'">'+
+    '<div class="mi-top">'+
+      '<span class="mi-num">'+num+'</span>'+
+      '<span class="mi-name" style="flex:1;">'+esc(m.name)+'</span>'+
+      '<span class="mi-price">$'+parseFloat(m.price).toFixed(2)+'</span>'+
+      '<span class="star-btn'+(m.featured?' on':'')+'" onclick="toggleStar('+m.id+','+(!m.featured)+')" title="Feature as special">★</span>'+
+      (canDrag?'<span class="drag-h">≡</span>':'')+
+    '</div>'+
+    '<div class="mi-desc">'+esc(m.description||'')+'</div>'+
+    '<div class="mi-tags">'+
+      '<span class="pill '+(m.temp_mode==='iced'?'cold':(m.temp_mode==='choice'?'choice':'hot'))+'">'+(m.temp_mode==='iced'?'Iced only':(m.temp_mode==='choice'?'Hot or iced':'Hot only'))+'</span> '+
+      (m.sold_out?'<span class="pill so">Sold Out</span> ':'')+
+      (milk?' Milk: '+esc(milk)+'.':'')+(sweet?' Sweeteners: '+esc(sweet)+'.':'')+
+    '</div>'+
+    '<div class="mi-actions">'+
+      '<button class="btn btn-ghost btn-sm" onclick="openEditor('+m.id+')">Edit</button>'+
+      '<button class="btn '+(m.sold_out?'btn-pink':'btn-ghost')+' btn-sm" onclick="toggleSoldOut('+m.id+','+(!m.sold_out)+')">'+(m.sold_out?'Back in Stock':'Mark Sold Out')+'</button>'+
+      '<button class="btn btn-danger btn-sm" onclick="removeDrink('+m.id+')">Remove</button>'+
+      arrows+
+    '</div>'+
+  '</div>';
+}
 function renderMenu(){
-  const el=document.getElementById('menuList');
-  if(!MENU.length){el.innerHTML='<div style="font-size:12px;color:var(--text-soft);margin-bottom:6px;">No drinks yet — add your first!</div>';return;}
-  el.innerHTML=MENU.map(m=>{
-    const milk=(m.milk_options||[]).join(', ');
-    const sweet=(m.sweetener_options||[]).join(', ');
-    return '<div class="mi'+(m.sold_out?' soldout-row':'')+'">'+
-      '<div class="mi-top">'+
-        '<span class="mi-name">'+esc(m.name)+'</span>'+
-        '<span class="mi-price">$'+parseFloat(m.price).toFixed(2)+'</span>'+
-      '</div>'+
-      '<div class="mi-desc">'+esc(m.description||'')+'</div>'+
-      '<div class="mi-tags">'+
-        '<span class="pill '+(m.temp_mode==='iced'?'cold':(m.temp_mode==='choice'?'choice':'hot'))+'">'+(m.temp_mode==='iced'?'Iced only':(m.temp_mode==='choice'?'Hot or iced':'Hot only'))+'</span> '+
-        (m.sold_out?'<span class="pill so">Sold Out</span> ':'')+
-        (milk?' Milk: '+esc(milk)+'.':'')+(sweet?' Sweeteners: '+esc(sweet)+'.':'')+
-      '</div>'+
-      '<div class="mi-actions">'+
-        '<button class="btn btn-ghost btn-sm" onclick="openEditor('+m.id+')">Edit</button>'+
-        '<button class="btn '+(m.sold_out?'btn-pink':'btn-ghost')+' btn-sm" onclick="toggleSoldOut('+m.id+','+(!m.sold_out)+')">'+(m.sold_out?'Back in Stock':'Mark Sold Out')+'</button>'+
-        '<button class="btn btn-danger btn-sm" onclick="removeDrink('+m.id+')">Remove</button>'+
-      '</div>'+
-    '</div>';
-  }).join('');
+  const spEl=document.getElementById('specialList'),rgEl=document.getElementById('regularList');
+  const canDrag=typeof Sortable!=='undefined';
+  const specials=MENU.filter(m=>m.featured),regs=MENU.filter(m=>!m.featured);
+  document.getElementById('specialGroupLabel').style.display=specials.length?'block':'none';
+  spEl.innerHTML=specials.map((m,i)=>drinkRow(m,i+1,canDrag)).join('');
+  rgEl.innerHTML=regs.length?regs.map((m,i)=>drinkRow(m,specials.length+i+1,canDrag)).join('')
+    :'<div style="font-size:12px;color:var(--text-soft);margin-bottom:6px;">No drinks yet — add your first!</div>';
+  if(canDrag){
+    if(sortSpecial)sortSpecial.destroy();if(sortRegular)sortRegular.destroy();
+    sortSpecial=new Sortable(spEl,{handle:'.drag-h',animation:150,onEnd:saveOrder});
+    sortRegular=new Sortable(rgEl,{handle:'.drag-h',animation:150,onEnd:saveOrder});
+  }
+}
+async function saveOrder(){
+  const ids=[...document.querySelectorAll('#specialList .mi'),...document.querySelectorAll('#regularList .mi')].map(el=>parseInt(el.dataset.id));
+  try{
+    for(let i=0;i<ids.length;i++){await sbSend('PATCH','menu_items?id=eq.'+ids[i],{sort_order:i+1});}
+    showToast('Order saved ✅');loadAll();
+  }catch(e){showToast('Reorder failed — try again');console.error(e);loadAll();}
+}
+async function toggleStar(id,feat){
+  try{await sbSend('PATCH','menu_items?id=eq.'+id,{featured:feat});showToast(feat?'Added to specials ✨':'Back to regular menu');loadAll();}
+  catch(e){showToast('Update failed — did you run the featured-column SQL?');console.error(e);}
+}
+async function moveRow(id,dir){
+  const m=MENU.find(x=>x.id===id);if(!m)return;
+  const group=MENU.filter(x=>!!x.featured===!!m.featured);
+  const idx=group.findIndex(x=>x.id===id);
+  const swap=group[idx+dir];if(!swap)return;
+  try{
+    await sbSend('PATCH','menu_items?id=eq.'+m.id,{sort_order:swap.sort_order});
+    await sbSend('PATCH','menu_items?id=eq.'+swap.id,{sort_order:m.sort_order});
+    loadAll();
+  }catch(e){showToast('Move failed');}
 }
 // ══ REMOVED DRINKS (restore / delete forever) ══
 function renderRemoved(){
@@ -474,7 +574,7 @@ async function saveDrink(){
   const btn=document.getElementById('editorSaveBtn');btn.disabled=true;btn.textContent='Saving…';
   try{
     if(editingId){await sbSend('PATCH','menu_items?id=eq.'+editingId,body);}
-    else{body.sort_order=(MENU.length?Math.max(...MENU.map(m=>m.sort_order||0)):0)+1;await sbSend('POST','menu_items',body);}
+    else{const all=[...MENU,...REMOVED];body.sort_order=(all.length?Math.max(...all.map(m=>m.sort_order||0)):0)+1;await sbSend('POST','menu_items',body);}
     closeEditor();showToast('Saved ✅');loadAll();
   }catch(e){showToast('Save failed');console.error(e);}
   btn.disabled=false;btn.textContent='Save';
