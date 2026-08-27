@@ -61,6 +61,10 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
 .grid-card.special{border:1.5px solid var(--pink);}
 .grid-card.hero-special{grid-column:1/-1;padding:24px 16px 18px;}
 .special-badge{display:inline-block;background:#D4537E;color:#fff;font-size:9px;font-weight:600;letter-spacing:0.08em;border-radius:50px;padding:3px 12px;margin-bottom:6px;}
+.grid-card.center-odd{grid-column:1/-1;width:calc(50% - 6px);margin:0 auto;}
+.menu-divider{grid-column:1/-1;display:flex;align-items:center;gap:14px;margin:14px 0 2px;position:relative;z-index:1;}
+.menu-divider .md-line{flex:1;height:1px;background:var(--brown-light);}
+.menu-divider .md-label{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;color:var(--brown);}
 .grid-card:active{transform:scale(0.97);box-shadow:0 4px 20px rgba(92,61,46,0.08);}
 .grid-num{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--brown);letter-spacing:0.02em;margin-bottom:4px;}
 .grid-name{font-weight:600;font-size:14px;color:var(--brown-dark);margin:4px 0 2px;line-height:1.2;}
@@ -517,7 +521,16 @@ function renderMenu(){
     const ic=iconSvg(SETTINGS.special_icon||'sparkle',18,'#993556');
     head.innerHTML='<span class="sh-title">'+ic+'<span>'+t+'</span>'+ic+'</span><div class="sh-rule"></div>';
     grid.appendChild(head);
-    specials.forEach(d=>grid.appendChild(makeCard(d,specials.length===1)));
+    specials.forEach((d,i)=>{
+      const c=makeCard(d,specials.length===1);
+      if(specials.length>1&&specials.length%2===1&&i===specials.length-1)c.classList.add('center-odd');
+      grid.appendChild(c);
+    });
+    if(regs.length){
+      const div=document.createElement('div');div.className='menu-divider';div.id='menuDivider';
+      div.innerHTML='<div class="md-line"></div><span class="md-label">Menu</span><div class="md-line"></div>';
+      grid.appendChild(div);
+    }
   }
   regs.forEach(d=>grid.appendChild(makeCard(d,false)));
 }
@@ -635,6 +648,8 @@ function filterCat(cat,el){
   el.classList.add('active');
   const sh=document.getElementById('specialHeader');
   if(sh)sh.style.display=cat==='all'?'':'none';
+  const md=document.getElementById('menuDivider');
+  if(md)md.style.display=cat==='all'?'':'none';
   document.querySelectorAll('.grid-card').forEach(c=>{
     const t=c.dataset.cat;
     const show=cat==='all'||(cat==='hot'&&(t==='hot'||t==='choice'))||(cat==='cold'&&(t==='iced'||t==='choice'));
@@ -737,7 +752,7 @@ function submitOrder(){
     total:cartTotal().toFixed(2),status:'pending',type:'preorder'};
   document.getElementById('payAmount').textContent='$'+currentOrder.total;
   // Venmo deep link — opens the app with amount + note pre-filled
-  const venmoNote='HLCK order – '+firstName+' '+lastName.charAt(0)+'.';
+  const venmoNote='☕ How Lovely Coffee pre-order';
   document.getElementById('venmoLink').href='https://venmo.com/Kim-Reyes-4?txn=pay&amount='+currentOrder.total+'&note='+encodeURIComponent(venmoNote);
   document.getElementById('orderFormSection').style.display='none';
   document.getElementById('paySection').style.display='block';
@@ -816,7 +831,7 @@ window.addEventListener('load',()=>{
   const savedCart=sessionStorage.getItem('hlck_cart');
   if(savedCart){try{const c=JSON.parse(savedCart);if(c&&typeof c==='object'){cart=c;renderCartBar();}}catch(e){}}
   const saved=sessionStorage.getItem('hlck_pending_order');
-  if(saved){try{currentOrder=JSON.parse(saved);document.getElementById('payAmount').textContent='$'+currentOrder.total;document.getElementById('venmoLink').href='https://venmo.com/Kim-Reyes-4?txn=pay&amount='+currentOrder.total+'&note='+encodeURIComponent('HLCK order – '+(currentOrder.name||''));document.getElementById('orderFormSection').style.display='none';document.getElementById('paySection').style.display='block';const btn=document.getElementById('confirmPayBtn');if(btn){btn.disabled=false;btn.textContent="I've Paid — Confirm Order";}showPage('page-order');}catch(e){sessionStorage.removeItem('hlck_pending_order');}}
+  if(saved){try{currentOrder=JSON.parse(saved);document.getElementById('payAmount').textContent='$'+currentOrder.total;document.getElementById('venmoLink').href='https://venmo.com/Kim-Reyes-4?txn=pay&amount='+currentOrder.total+'&note='+encodeURIComponent('☕ How Lovely Coffee pre-order');document.getElementById('orderFormSection').style.display='none';document.getElementById('paySection').style.display='block';const btn=document.getElementById('confirmPayBtn');if(btn){btn.disabled=false;btn.textContent="I've Paid — Confirm Order";}showPage('page-order');}catch(e){sessionStorage.removeItem('hlck_pending_order');}}
 });
 </script>
 </body>
