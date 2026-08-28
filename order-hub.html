@@ -880,8 +880,11 @@ function renderHistory() {
   feed.innerHTML = keys.map((key, gi) => {
     const g = groups[key];
     const revenue = g.orders.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
-    const pre = g.orders.filter(o => o.type !== 'Walk-In').length;
-    const walk = g.orders.length - pre;
+    const preOrders = g.orders.filter(o => o.type !== 'Walk-In');
+    const walkOrders = g.orders.filter(o => o.type === 'Walk-In');
+    const pre = preOrders.length, walk = walkOrders.length;
+    const preRev = preOrders.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
+    const walkRev = walkOrders.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
     const drinks = drinkTotals(g.orders).map(([n, q]) => n + ' \u00d7' + q).join(' \u00b7 ');
     const cards = g.orders.map(o =>
       '<div class="order-card completed">' +
@@ -889,6 +892,7 @@ function renderHistory() {
         '<div class="order-items">' + itemLines(o.items) + '</div>' +
         '<div class="order-meta"><span><strong>$' + parseFloat(o.total).toFixed(2) + '</strong></span><span>' + (o.slot || '') + '</span><span>' + (o.status || '') + '</span>' + (o.phone ? '<span>' + o.phone + '</span>' : '') + '</div>' +
         '<div class="order-done-time">Completed: ' + o.completedAt + '</div>' +
+        (o.id ? '<div class="order-actions"><button class="btn-void" onclick="deleteHistoryOrder(' + o.id + ')">Delete ✕</button></div>' : '') +
       '</div>').join('');
     const isOpen = hadGroups ? openKeys.has(key) : gi === 0;
     return '<details class="day-group" data-key="' + key.replace(/"/g, '&quot;') + '"' + (isOpen ? ' open' : '') + '>' +
@@ -897,7 +901,8 @@ function renderHistory() {
         '<button class="day-csv" onclick="event.preventDefault();event.stopPropagation();exportCSV(\'' + key.replace(/'/g, "\\'") + '\')">CSV</button>' +
       '</summary>' +
       '<div class="dg-body">' +
-        '<div class="day-summary"><strong>' + g.orders.length + ' orders \u00b7 $' + revenue.toFixed(2) + '</strong> \u00b7 ' + pre + ' pre-order' + (pre === 1 ? '' : 's') + ' \u00b7 ' + walk + ' walk-in' + (walk === 1 ? '' : 's') +
+        '<div class="day-summary"><strong>' + g.orders.length + ' orders \u00b7 $' + revenue.toFixed(2) + ' total</strong><br/>' +
+        'Pre-orders $' + preRev.toFixed(2) + ' (' + pre + ') \u00b7 Walk-ins $' + walkRev.toFixed(2) + ' (' + walk + ')' +
         (drinks ? '<br/>' + drinks : '') + '</div>' +
         cards +
       '</div>' +
@@ -917,6 +922,20 @@ function exportCSV(dayKey) {
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(a.href);
   showToast('CSV downloaded \u2713');
+}
+
+// ══ DELETE SINGLE HISTORY ORDER (e.g. refunds) ══
+async function deleteHistoryOrder(id) {
+  const order = completedOrders.find(o => o.id === id);
+  if (!order) return;
+  if (!confirm('Permanently delete this order?\n\n' + (order.name || 'Customer') + ' — $' + parseFloat(order.total).toFixed(2) + '\n\nThis removes it from the database and your sales totals (e.g. after a refund). It cannot be undone.')) return;
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/orders?id=eq.' + id, { method: 'DELETE', headers: SUPA_HEADERS });
+    if (!res.ok) throw new Error(res.status);
+    completedOrders = completedOrders.filter(o => o.id !== id);
+    updateStats(); renderHistory();
+    showToast('Order deleted');
+  } catch (e) { console.error('Delete error:', e); showToast('Delete failed — check connection'); }
 }
 
 // ══ CLEAR HISTORY ══
