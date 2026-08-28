@@ -152,10 +152,10 @@ select.form-input{cursor:pointer;}
 .badge-live{background:#E3F2FD;color:#1565C0;}
 .order-card.live{border-left-color:#1565C0;}
 .order-items{font-size:13px;color:var(--text-mid);line-height:1.5;margin-bottom:6px;}
-.order-meta{display:flex;gap:16px;font-size:11px;color:var(--text-soft);}
+.order-meta{display:flex;gap:10px 16px;font-size:11px;color:var(--text-soft);flex-wrap:wrap;}
 .order-meta strong{color:var(--text);font-weight:600;}
 
-.order-actions{margin-top:10px;display:flex;gap:8px;}
+.order-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
 .btn-done{padding:7px 18px;border-radius:50px;border:none;background:var(--green);color:var(--white);font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;letter-spacing:0.02em;}
 .btn-done:hover{background:#43A047;}
 .btn-done:active{transform:scale(0.96);}
@@ -214,6 +214,18 @@ select.form-input{cursor:pointer;}
 .lock-key{width:64px;height:64px;border-radius:50%;border:1.5px solid var(--cream-dark);background:var(--white);font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;color:var(--brown);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;user-select:none;margin:0 auto;}
 .lock-key:active{transform:scale(0.93);background:var(--pink-pale);}
 .lock-key.fn{font-size:14px;font-family:'Outfit',sans-serif;font-weight:500;color:var(--text-soft);}
+/* ══ HISTORY DAY GROUPS + CSV ══ */
+.day-group{border:1.5px solid var(--cream-dark);border-radius:16px;margin-bottom:12px;background:var(--white);overflow:hidden;}
+.day-group summary{cursor:pointer;padding:14px 16px;font-weight:600;font-size:14px;color:var(--brown-dark);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;user-select:none;}
+.day-group summary::-webkit-details-marker{display:none;}
+.day-group summary .dg-arrow{transition:transform 0.2s;font-size:11px;color:var(--text-soft);}
+.day-group[open] summary .dg-arrow{transform:rotate(90deg);}
+.day-group summary .dg-meta{font-weight:400;font-size:12px;color:var(--text-soft);}
+.day-group .dg-body{padding:0 12px 12px;}
+.day-csv{margin-left:auto;background:none;border:1.5px solid var(--cream-dark);border-radius:50px;padding:8px 16px;font-family:'Outfit',sans-serif;font-size:11px;color:var(--text-mid);cursor:pointer;font-weight:600;min-height:32px;}
+.day-csv:hover{border-color:var(--pink);color:var(--pink-deep);}
+.day-summary{background:var(--cream);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--text-mid);line-height:1.6;}
+.day-summary strong{color:var(--brown-dark);}
 </style>
 </head>
 <body>
@@ -250,7 +262,7 @@ select.form-input{cursor:pointer;}
 <div class="hub-header">
   <img class="hub-logo" src="logo.png" alt="How Lovely Coffee Ko."/>
   <div class="hub-title">How Lovely Coffee Ko.</div>
-  <div class="hub-subtitle">ORDER HUB · FATHER'S DAY 2026</div>
+  <div class="hub-subtitle">ORDER HUB</div>
   <button class="setup-gear" onclick="toggleSetup()" title="Google Sheets Setup">&#9881;</button>
 </div>
 
@@ -329,12 +341,16 @@ select.form-input{cursor:pointer;}
     <div class="sweet-handle"></div>
     <div class="sweet-drink-name" id="sweetDrinkName">Drink Name</div>
     <div class="sweet-drink-price" id="sweetDrinkPrice">$0.00</div>
+    <div id="hubTempSection" style="display:none;">
+      <div class="sweet-label">Hot or Iced?</div>
+      <div class="sweet-options" id="hubTempOptions"></div>
+    </div>
     <div id="hubMilkSection" style="display:none;">
       <div class="sweet-label">Choose Milk</div>
       <div class="sweet-options" id="hubMilkOptions"></div>
     </div>
     <div id="hubSweetenerSection" style="display:none;">
-      <div class="sweet-label">Choose Syrup</div>
+      <div class="sweet-label">Choose Sweetener</div>
       <div class="sweet-options" id="hubSweetenerOptions"></div>
     </div>
     <div class="sweet-label">Quantity</div>
@@ -374,6 +390,7 @@ select.form-input{cursor:pointer;}
       <div class="feed-pill" onclick="filterHistory('preorder',this)">Pre-Orders</div>
       <div class="feed-pill" onclick="filterHistory('walkin',this)">Walk-Ins</div>
     </div>
+    <button onclick="exportCSV(null)" style="background:none;border:1.5px solid var(--cream-dark);border-radius:50px;padding:6px 14px;font-family:'Outfit',sans-serif;font-size:11px;color:var(--text-mid);cursor:pointer;font-weight:600;margin-right:6px;">Download CSV</button>
     <button onclick="clearHistory()" style="background:none;border:1.5px solid #E53935;border-radius:50px;padding:6px 14px;font-family:'Outfit',sans-serif;font-size:11px;color:#E53935;cursor:pointer;font-weight:600;transition:all 0.15s;">Clear History</button>
   </div>
   <div id="historyFeed">
@@ -460,18 +477,29 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const SUPA_HEADERS = { 'Content-Type':'application/json', 'apikey':SUPABASE_KEY, 'Authorization':'Bearer '+SUPABASE_KEY };
 let SHEETS_URL = '';
 
-// ══ MENU DATA (matches index.html) ══
-const MENU = [
-  {name:'Latte',price:6.50,cat:'hot',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
-  {name:'Cappuccino',price:6.50,cat:'hot',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
-  {name:'Americano',price:5,cat:'hot',milk:null,sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
-  {name:'Chai Latte',price:6.50,cat:'hot',milk:['Whole','Oat'],sweetener:['Vanilla','Hazelnut','Mocha','Caramel'],sweetness:null},
-  {name:'The Usual (Bottled)',price:6.50,cat:'cold',milk:['Whole','Oat'],sweetener:null,sweetness:null},
-  {name:'Banana Cue (Bottled)',price:6.50,cat:'cold',milk:['Whole','Oat'],sweetener:null,sweetness:null},
-  {name:'Salted Coconut Cold Brew (Bottled)',price:6.50,cat:'cold',milk:['Whole','Oat'],sweetener:null,sweetness:null},
-  {name:'Raspberry Mocha (Bottled)',price:6.50,cat:'cold',milk:['Whole','Oat'],sweetener:null,sweetness:null},
-  {name:'Hot Chocolate',price:6,cat:'hot',milk:null,sweetener:null,sweetness:null},
-];
+// ══ MENU — loaded live from Supabase (edit via admin.html) ══
+let MENU = [];
+let HUB_SLOTS = [];
+async function loadMenu() {
+  try {
+    const [rMenu, rSlots] = await Promise.all([
+      fetch(SUPABASE_URL + '/rest/v1/menu_items?select=*&active=is.true&order=sort_order.asc,id.asc', { headers: SUPA_HEADERS }),
+      fetch(SUPABASE_URL + '/rest/v1/pickup_slots?select=*&active=is.true&order=sort_order.asc,id.asc', { headers: SUPA_HEADERS })
+    ]);
+    if (!rMenu.ok) throw new Error(rMenu.status);
+    const rows = await rMenu.json();
+    const feat = rows.filter(m => m.featured), reg = rows.filter(m => !m.featured);
+    MENU = [...feat, ...reg].map(m => ({
+      name: m.name, price: parseFloat(m.price), temp: m.temp_mode || 'hot',
+      milk: (Array.isArray(m.milk_options) && m.milk_options.length) ? m.milk_options : null,
+      sweetener: (Array.isArray(m.sweetener_options) && m.sweetener_options.length) ? m.sweetener_options : null,
+      soldOut: !!m.sold_out, featured: !!m.featured
+    }));
+    if (rSlots.ok) { HUB_SLOTS = (await rSlots.json()).map(s => (s.label || '').trim()).filter(Boolean); }
+  } catch (e) { console.error('Menu load failed:', e); }
+  buildQuickGrid();
+  renderFeed();
+}
 
 // ══ STATE ══
 let hubCart = [];
@@ -482,7 +510,7 @@ let feedFilter = 'all';
 let historyFilter = 'all';
 let pendingDrink = null;
 let modalQty = 1;
-let modalMilk = '', modalSweetener = '', modalSweetness = '';
+let modalMilk = '', modalSweetener = '', modalSweetness = '', modalTemp = '';
 let cartIdCounter = 0;
 
 // ══ TAB SWITCHING ══
@@ -499,12 +527,14 @@ function switchTab(tab) {
 function buildQuickGrid() {
   const grid = document.getElementById('quickGrid');
   grid.innerHTML = '';
+  if (!MENU.length) { grid.innerHTML = '<div class="cart-empty">Loading menu\u2026</div>'; return; }
   MENU.forEach(item => {
     const inCart = hubCart.some(c => c.name === item.name);
     const div = document.createElement('div');
     div.className = 'quick-item' + (inCart ? ' in-cart' : '');
-    div.innerHTML = '<div class="quick-info"><div class="quick-name">' + item.name + '</div><div class="quick-price">$' + item.price.toFixed(2) + '</div></div>';
-    div.onclick = () => openSweetModal(item);
+    if (item.soldOut) div.style.opacity = '0.4';
+    div.innerHTML = '<div class="quick-info"><div class="quick-name">' + (item.featured ? '\u2728 ' : '') + item.name + '</div><div class="quick-price">$' + item.price.toFixed(2) + '</div></div>';
+    div.onclick = () => item.soldOut ? showToast(item.name + ' is sold out') : openSweetModal(item);
     grid.appendChild(div);
   });
 }
@@ -515,10 +545,18 @@ function openSweetModal(item) {
   modalQty = 1;
   modalMilk = item.milk ? item.milk[0] : '';
   modalSweetener = item.sweetener ? item.sweetener[0] : '';
-  modalSweetness = item.sweetness ? item.sweetness[0] : '';
+  modalSweetness = '';
+  modalTemp = item.temp === 'choice' ? 'Hot' : '';
   document.getElementById('sweetDrinkName').textContent = item.name;
   document.getElementById('sweetDrinkPrice').textContent = '$' + item.price.toFixed(2);
   document.getElementById('modalQtyNum').textContent = '1';
+  // Temperature
+  const tempSec = document.getElementById('hubTempSection');
+  const tempOpts = document.getElementById('hubTempOptions');
+  if (item.temp === 'choice') {
+    tempSec.style.display = 'block';
+    tempOpts.innerHTML = ['Hot','Iced'].map((t, i) => '<div class="sweet-opt' + (i === 0 ? ' active' : '') + '" onclick="pickOpt(\'temp\',this,\'' + t + '\')">' + t + '</div>').join('');
+  } else { tempSec.style.display = 'none'; tempOpts.innerHTML = ''; }
   // Milk
   const milkSec = document.getElementById('hubMilkSection');
   const milkOpts = document.getElementById('hubMilkOptions');
@@ -543,6 +581,7 @@ function pickOpt(group, el, val) {
   if (group === 'milk') modalMilk = val;
   if (group === 'sweetener') modalSweetener = val;
   if (group === 'sweetness') modalSweetness = val;
+  if (group === 'temp') modalTemp = val;
 }
 
 function modalQtyChange(delta) {
@@ -562,14 +601,15 @@ function confirmAdd() {
   const d = pendingDrink;
   const milk = d.milk ? modalMilk : '\u2014';
   const sweetener = d.sweetener ? modalSweetener : '\u2014';
-  const sweetness = d.sweetness ? modalSweetness : '\u2014';
-  const existing = hubCart.find(c => c.name === d.name && c.milk === milk && c.sweetener === sweetener && c.sweetness === sweetness);
+  const sweetness = '\u2014';
+  const temp = d.temp === 'choice' ? modalTemp : '\u2014';
+  const existing = hubCart.find(c => c.name === d.name && c.temp === temp && c.milk === milk && c.sweetener === sweetener);
   if (existing) { existing.qty += modalQty; }
-  else { hubCart.push({ id: ++cartIdCounter, name: d.name, price: d.price, milk, sweetener, sweetness, qty: modalQty }); }
+  else { hubCart.push({ id: ++cartIdCounter, name: d.name, price: d.price, temp, milk, sweetener, sweetness, qty: modalQty }); }
   closeSweetModal();
   renderCart();
   buildQuickGrid();
-  const label = [milk !== '\u2014' ? milk : '', sweetener !== '\u2014' ? sweetener : '', sweetness !== '\u2014' ? sweetness : ''].filter(Boolean).join(' \u00b7 ');
+  const label = [temp !== '\u2014' ? temp : '', milk !== '\u2014' ? milk : '', sweetener !== '\u2014' ? sweetener : ''].filter(Boolean).join(' \u00b7 ');
   showToast(modalQty + '\u00d7 ' + d.name + (label ? ' (' + label + ')' : '') + ' added!');
   pendingDrink = null;
 }
@@ -591,7 +631,7 @@ function renderCart() {
   const totalItems = hubCart.reduce((s, c) => s + c.qty, 0);
   countBadge.textContent = totalItems; countBadge.style.display = 'flex'; totalRow.style.display = 'flex';
   container.innerHTML = hubCart.map(c => {
-    const details = [c.milk !== '\u2014' ? c.milk : '', c.sweetener !== '\u2014' ? c.sweetener : '', c.sweetness !== '\u2014' ? c.sweetness : ''].filter(Boolean).join(' \u00b7 ');
+    const details = [c.temp && c.temp !== '\u2014' ? c.temp : '', c.milk !== '\u2014' ? c.milk : '', c.sweetener !== '\u2014' ? c.sweetener : ''].filter(Boolean).join(' \u00b7 ');
     return '<div class="cart-item">' +
       '<div class="cart-item-info"><div class="cart-item-name">' + c.name + '</div>' +
       (details ? '<div class="cart-item-sweet">' + details + '</div>' : '') +
@@ -627,7 +667,7 @@ async function submitWalkin() {
   const name = document.getElementById('hubName').value.trim() || 'Walk-In Customer';
   const phone = document.getElementById('hubPhone').value.trim() || '';
   const itemsSummary = hubCart.map(c => {
-    const opts = [c.milk !== '\u2014' ? c.milk : '', c.sweetener !== '\u2014' ? c.sweetener : '', c.sweetness !== '\u2014' ? c.sweetness : ''].filter(Boolean).join(', ');
+    const opts = [c.temp && c.temp !== '\u2014' ? c.temp : '', c.milk !== '\u2014' ? c.milk : '', c.sweetener !== '\u2014' ? c.sweetener : ''].filter(Boolean).join(', ');
     return c.qty + 'x ' + c.name + (opts ? ' (' + opts + ')' : '');
   }).join(', ');
   const total = hubCart.reduce((s, c) => s + c.qty * c.price, 0);
@@ -676,31 +716,36 @@ function renderFeed() {
     feed.innerHTML = '<div class="empty-state"><div class="empty-icon">\u2615</div><div class="empty-text">No orders yet.</div></div>';
     return;
   }
-  // Group orders by pickup slot
-  const groups = [
-    { key: 'pre-service', title: 'Pickup', time: '9:00 \u2013 9:20 AM', match: o => (o.slot||'').includes('9:00') },
-    { key: 'walkin', title: 'Walk-Ins', time: '', match: o => o.type === 'Walk-In' },
-  ];
-  let html = '';
-  groups.forEach(g => {
-    const groupOrders = filtered.filter(g.match);
-    if (!groupOrders.length) return;
-    html += '<div class="feed-section-header">' +
-      '<div class="feed-section-dot ' + g.key + '"></div>' +
-      '<span class="feed-section-title">' + g.title + '</span>' +
-      (g.time ? '<span class="feed-section-count">' + g.time + '</span>' : '') +
-      '<span class="feed-section-count">(' + groupOrders.length + ')</span>' +
-      '<div class="feed-section-line"></div>' +
-    '</div>';
-    html += groupOrders.map(o => renderOrderCard(o)).join('');
+  // Collapsible groups: one per pickup slot (in admin order), unknown slots next, Walk-Ins last
+  const hadGroups = feed.querySelector('details.day-group') !== null;
+  const openKeys = new Set(Array.from(feed.querySelectorAll('details.day-group[open]')).map(d => d.dataset.key));
+  const bySlot = {};
+  const seen = [];
+  filtered.forEach(o => {
+    const key = o.type === 'Walk-In' ? '__walkin' : ((o.slot || '').trim() || 'No pickup time');
+    if (!bySlot[key]) { bySlot[key] = []; seen.push(key); }
+    bySlot[key].push(o);
   });
-  // Catch any orders that don't match a group
-  const ungrouped = filtered.filter(o => !groups.some(g => g.match(o)));
-  if (ungrouped.length) {
-    html += '<div class="feed-section-header"><span class="feed-section-title">Other</span><div class="feed-section-line"></div></div>';
-    html += ungrouped.map(o => renderOrderCard(o)).join('');
-  }
-  feed.innerHTML = html;
+  const known = HUB_SLOTS.filter(s => bySlot[s]);
+  const unknown = seen.filter(k => k !== '__walkin' && !HUB_SLOTS.includes(k));
+  const finalKeys = [...known, ...unknown, ...(bySlot['__walkin'] ? ['__walkin'] : [])];
+  feed.innerHTML = finalKeys.map((key, gi) => {
+    const orders = bySlot[key].slice().sort((a, b) => (a.id || 0) - (b.id || 0));
+    const label = key === '__walkin' ? 'Walk-Ins' : key;
+    const revenue = orders.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
+    const unpaid = orders.filter(o => o.type !== 'Walk-In' && !(o.status || '').includes('Paid')).length;
+    const drinks = drinkTotals(orders).map(([n, q]) => n + ' \u00d7' + q).join(' \u00b7 ');
+    const isOpen = hadGroups ? openKeys.has(key) : gi === 0;
+    return '<details class="day-group" data-key="' + key.replace(/"/g, '&quot;') + '"' + (isOpen ? ' open' : '') + '>' +
+      '<summary><span class="dg-arrow">\u25b6</span>' + label +
+        '<span class="dg-meta">' + orders.length + ' order' + (orders.length === 1 ? '' : 's') + ' \u00b7 $' + revenue.toFixed(2) + (unpaid ? ' \u00b7 ' + unpaid + ' unpaid' : '') + '</span>' +
+      '</summary>' +
+      '<div class="dg-body">' +
+        (drinks ? '<div class="day-summary"><strong>Prep:</strong> ' + drinks + '</div>' : '') +
+        orders.map(o => renderOrderCard(o)).join('') +
+      '</div>' +
+    '</details>';
+  }).join('');
 }
 
 // Split a combined items string into one line per drink.
@@ -794,27 +839,90 @@ function filterHistory(type, el) {
   if (el) el.classList.add('active'); renderHistory();
 }
 
-function renderHistory() {
-  const feed = document.getElementById('historyFeed');
+function historyDayKey(o) {
+  const raw = String(o.completedAt || o.timestamp || '');
+  const datePart = raw.split(',')[0].trim();
+  const d = new Date(datePart);
+  if (isNaN(d.getTime())) return { key: 'other', label: 'Other orders', sort: 0 };
+  return { key: datePart, label: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }), sort: d.getTime() };
+}
+function historyFiltered() {
   let filtered = completedOrders;
   if (historyFilter === 'preorder') filtered = completedOrders.filter(o => o.type === 'Pre-Order' || o.type === 'preorder');
   if (historyFilter === 'live') filtered = completedOrders.filter(o => o.type === 'live');
   if (historyFilter === 'walkin') filtered = completedOrders.filter(o => o.type === 'Walk-In');
+  return filtered;
+}
+function drinkTotals(orders) {
+  const t = {};
+  orders.forEach(o => {
+    String(o.items || '').split(/,\s+(?=\d+x\s)/).forEach(seg => {
+      const m = seg.match(/^(\d+)x\s+([^(]+)/);
+      if (m) { const n = m[2].trim(); t[n] = (t[n] || 0) + parseInt(m[1]); }
+    });
+  });
+  return Object.entries(t).sort((a, b) => b[1] - a[1]);
+}
+function renderHistory() {
+  const feed = document.getElementById('historyFeed');
+  const filtered = historyFiltered();
   if (!filtered.length) { feed.innerHTML = '<div class="empty-state"><div class="empty-icon">\u2713</div><div class="empty-text">Completed orders will appear here.</div></div>'; return; }
-  feed.innerHTML = filtered.map(o =>
-    '<div class="order-card completed">' +
-      '<div class="order-card-header"><span class="order-name">' + (o.name || 'Customer') + '</span><span class="order-badge badge-done">Done</span></div>' +
-      '<div class="order-items">' + itemLines(o.items) + '</div>' +
-      '<div class="order-meta"><span><strong>$' + parseFloat(o.total).toFixed(2) + '</strong></span><span>' + (o.slot || '') + '</span><span>' + (o.status || '') + '</span>' + (o.phone ? '<span>' + o.phone + '</span>' : '') + '</div>' +
-      '<div class="order-done-time">Completed: ' + o.completedAt + '</div>' +
-    '</div>'
-  ).join('');
+  const hadGroups = feed.querySelector('details.day-group') !== null;
+  const openKeys = new Set(Array.from(feed.querySelectorAll('details.day-group[open]')).map(d => d.dataset.key));
+  const groups = {};
+  const keys = [];
+  filtered.forEach(o => {
+    const dk = historyDayKey(o);
+    if (!groups[dk.key]) { groups[dk.key] = { label: dk.label, sort: dk.sort, orders: [] }; keys.push(dk.key); }
+    groups[dk.key].orders.push(o);
+  });
+  keys.sort((a, b) => groups[b].sort - groups[a].sort);
+  feed.innerHTML = keys.map((key, gi) => {
+    const g = groups[key];
+    const revenue = g.orders.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
+    const pre = g.orders.filter(o => o.type !== 'Walk-In').length;
+    const walk = g.orders.length - pre;
+    const drinks = drinkTotals(g.orders).map(([n, q]) => n + ' \u00d7' + q).join(' \u00b7 ');
+    const cards = g.orders.map(o =>
+      '<div class="order-card completed">' +
+        '<div class="order-card-header"><span class="order-name">' + (o.name || 'Customer') + '</span><span class="order-badge badge-done">Done</span></div>' +
+        '<div class="order-items">' + itemLines(o.items) + '</div>' +
+        '<div class="order-meta"><span><strong>$' + parseFloat(o.total).toFixed(2) + '</strong></span><span>' + (o.slot || '') + '</span><span>' + (o.status || '') + '</span>' + (o.phone ? '<span>' + o.phone + '</span>' : '') + '</div>' +
+        '<div class="order-done-time">Completed: ' + o.completedAt + '</div>' +
+      '</div>').join('');
+    const isOpen = hadGroups ? openKeys.has(key) : gi === 0;
+    return '<details class="day-group" data-key="' + key.replace(/"/g, '&quot;') + '"' + (isOpen ? ' open' : '') + '>' +
+      '<summary><span class="dg-arrow">\u25b6</span>' + g.label +
+        '<span class="dg-meta">' + g.orders.length + ' order' + (g.orders.length === 1 ? '' : 's') + ' \u00b7 $' + revenue.toFixed(2) + '</span>' +
+        '<button class="day-csv" onclick="event.preventDefault();event.stopPropagation();exportCSV(\'' + key.replace(/'/g, "\\'") + '\')">CSV</button>' +
+      '</summary>' +
+      '<div class="dg-body">' +
+        '<div class="day-summary"><strong>' + g.orders.length + ' orders \u00b7 $' + revenue.toFixed(2) + '</strong> \u00b7 ' + pre + ' pre-order' + (pre === 1 ? '' : 's') + ' \u00b7 ' + walk + ' walk-in' + (walk === 1 ? '' : 's') +
+        (drinks ? '<br/>' + drinks : '') + '</div>' +
+        cards +
+      '</div>' +
+    '</details>';
+  }).join('');
+}
+function exportCSV(dayKey) {
+  const source = historyFiltered().filter(o => dayKey === null || historyDayKey(o).key === dayKey);
+  if (!source.length) { showToast('No orders to export'); return; }
+  const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const rows = [['Completed', 'Name', 'Phone', 'Type', 'Items', 'Total', 'Payment', 'Slot', 'Status'].map(q).join(',')];
+  source.forEach(o => rows.push([o.completedAt || o.timestamp, o.name, o.phone, o.type, o.items, o.total, o.payment_method, o.slot, o.status].map(q).join(',')));
+  const blob = new Blob(['\ufeff' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8' }); // leading ﻿ BOM helps Excel read accents
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'hlck-orders-' + (dayKey ? dayKey.replace(/\//g, '-') : 'all') + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  showToast('CSV downloaded \u2713');
 }
 
 // ══ CLEAR HISTORY ══
 async function clearHistory() {
   if (!completedOrders.length) { showToast('History is already empty'); return; }
-  if (!confirm('Clear completed orders from display?\n\nSupabase & Sheets records are NOT affected.')) return;
+  if (!confirm('⚠️ This PERMANENTLY DELETES all completed orders from the database — your sales history will be gone.\n\nDownload the CSV first if you want records for bookkeeping.\n\nDelete everything?')) return;
   for (const order of completedOrders) {
     if (SUPABASE_URL && order.id) {
       try { await fetch(SUPABASE_URL + '/rest/v1/orders?id=eq.' + order.id, { method: 'DELETE', headers: SUPA_HEADERS }); } catch(e) { console.error('Delete error:', e); }
@@ -889,7 +997,7 @@ function lockClear() { lockInput = ''; updateDots(); }
 function updateDots() { for (let i = 0; i < 4; i++) document.getElementById('dot' + i).classList.toggle('filled', i < lockInput.length); }
 
 // ══ INIT ══
-function initHub() { const s = sessionStorage.getItem('hlck_sheets_url'); if (s) SHEETS_URL = s; buildQuickGrid(); renderCart(); loadOrders(true); startAutoRefresh(); }
+function initHub() { const s = sessionStorage.getItem('hlck_sheets_url'); if (s) SHEETS_URL = s; loadMenu(); renderCart(); loadOrders(true); startAutoRefresh(); }
 
 document.addEventListener('keydown', (e) => {
   if (document.getElementById('lockScreen').classList.contains('hidden')) return;
