@@ -215,6 +215,10 @@ select.form-input{cursor:pointer;}
 .lock-key:active{transform:scale(0.93);background:var(--pink-pale);}
 .lock-key.fn{font-size:14px;font-family:'Outfit',sans-serif;font-weight:500;color:var(--text-soft);}
 /* ══ HISTORY DAY GROUPS + CSV ══ */
+.sweet-opt.locked{opacity:0.55;pointer-events:none;background:var(--cream);border-style:dashed;}
+.il-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:0.06em;border-radius:50px;padding:2px 8px;margin-right:5px;vertical-align:1px;}
+.il-badge.hot{background:#F5E0D3;color:#A0642F;}
+.il-badge.iced{background:#DCE9EF;color:#3E7A96;}
 .day-group{border:1.5px solid var(--cream-dark);border-radius:16px;margin-bottom:12px;background:var(--white);overflow:hidden;}
 .day-group summary{cursor:pointer;padding:14px 16px;font-weight:600;font-size:14px;color:var(--brown-dark);list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;user-select:none;}
 .day-group summary::-webkit-details-marker{display:none;}
@@ -344,6 +348,10 @@ select.form-input{cursor:pointer;}
     <div id="hubTempSection" style="display:none;">
       <div class="sweet-label">Hot or Iced?</div>
       <div class="sweet-options" id="hubTempOptions"></div>
+    </div>
+    <div id="hubShotsSection" style="display:none;">
+      <div class="sweet-label">Espresso Shots</div>
+      <div class="sweet-options" id="hubShotsOptions"></div>
     </div>
     <div id="hubMilkSection" style="display:none;">
       <div class="sweet-label">Choose Milk</div>
@@ -480,11 +488,14 @@ let SHEETS_URL = '';
 // ══ MENU — loaded live from Supabase (edit via admin.html) ══
 let MENU = [];
 let HUB_SLOTS = [];
+const QUAD_SHOT_UPCHARGE = 0; // fallback only — live value comes from admin settings (quad_upcharge)
+let HUB_QUAD = QUAD_SHOT_UPCHARGE;
 async function loadMenu() {
   try {
-    const [rMenu, rSlots] = await Promise.all([
+    const [rMenu, rSlots, rSet] = await Promise.all([
       fetch(SUPABASE_URL + '/rest/v1/menu_items?select=*&active=is.true&order=sort_order.asc,id.asc', { headers: SUPA_HEADERS }),
-      fetch(SUPABASE_URL + '/rest/v1/pickup_slots?select=*&active=is.true&order=sort_order.asc,id.asc', { headers: SUPA_HEADERS })
+      fetch(SUPABASE_URL + '/rest/v1/pickup_slots?select=*&active=is.true&order=sort_order.asc,id.asc', { headers: SUPA_HEADERS }),
+      fetch(SUPABASE_URL + '/rest/v1/settings?select=value&key=eq.quad_upcharge', { headers: SUPA_HEADERS })
     ]);
     if (!rMenu.ok) throw new Error(rMenu.status);
     const rows = await rMenu.json();
@@ -493,9 +504,11 @@ async function loadMenu() {
       name: m.name, price: parseFloat(m.price), temp: m.temp_mode || 'hot',
       milk: (Array.isArray(m.milk_options) && m.milk_options.length) ? m.milk_options : null,
       sweetener: (Array.isArray(m.sweetener_options) && m.sweetener_options.length) ? m.sweetener_options : null,
+      shots: (Array.isArray(m.shots_options) && m.shots_options.length) ? m.shots_options : null,
       soldOut: !!m.sold_out, featured: !!m.featured
     }));
     if (rSlots.ok) { HUB_SLOTS = (await rSlots.json()).map(s => (s.label || '').trim()).filter(Boolean); }
+    if (rSet.ok) { const sr = await rSet.json(); const v = parseFloat(sr[0] && sr[0].value); HUB_QUAD = (isNaN(v) || v < 0) ? QUAD_SHOT_UPCHARGE : v; }
   } catch (e) { console.error('Menu load failed:', e); }
   buildQuickGrid();
   renderFeed();
@@ -510,7 +523,7 @@ let feedFilter = 'all';
 let historyFilter = 'all';
 let pendingDrink = null;
 let modalQty = 1;
-let modalMilk = '', modalSweetener = '', modalSweetness = '', modalTemp = '';
+let modalMilk = '', modalSweetener = '', modalSweetness = '', modalTemp = '', modalShots = '';
 let cartIdCounter = 0;
 
 // ══ TAB SWITCHING ══
@@ -547,6 +560,7 @@ function openSweetModal(item) {
   modalSweetener = item.sweetener ? item.sweetener[0] : '';
   modalSweetness = '';
   modalTemp = item.temp === 'choice' ? 'Hot' : '';
+  modalShots = item.shots ? item.shots[0] : '';
   document.getElementById('sweetDrinkName').textContent = item.name;
   document.getElementById('sweetDrinkPrice').textContent = '$' + item.price.toFixed(2);
   document.getElementById('modalQtyNum').textContent = '1';
@@ -556,7 +570,17 @@ function openSweetModal(item) {
   if (item.temp === 'choice') {
     tempSec.style.display = 'block';
     tempOpts.innerHTML = ['Hot','Iced'].map((t, i) => '<div class="sweet-opt' + (i === 0 ? ' active' : '') + '" onclick="pickOpt(\'temp\',this,\'' + t + '\')">' + t + '</div>').join('');
-  } else { tempSec.style.display = 'none'; tempOpts.innerHTML = ''; }
+  } else {
+    tempSec.style.display = 'block';
+    tempOpts.innerHTML = '<div class="sweet-opt locked">' + (item.temp === 'iced' ? 'Iced only' : 'Hot only') + '</div>';
+  }
+  // Shots
+  const shotsSec = document.getElementById('hubShotsSection');
+  const shotsOpts = document.getElementById('hubShotsOptions');
+  if (item.shots) {
+    shotsSec.style.display = 'block';
+    shotsOpts.innerHTML = item.shots.map((s, i) => '<div class="sweet-opt' + (i === 0 ? ' active' : '') + '" onclick="pickShot(this,' + i + ')">' + s + (s === 'Quad' && HUB_QUAD > 0 ? ' +$' + HUB_QUAD.toFixed(2) : '') + '</div>').join('');
+  } else { shotsSec.style.display = 'none'; shotsOpts.innerHTML = ''; }
   // Milk
   const milkSec = document.getElementById('hubMilkSection');
   const milkOpts = document.getElementById('hubMilkOptions');
@@ -583,6 +607,17 @@ function pickOpt(group, el, val) {
   if (group === 'sweetness') modalSweetness = val;
   if (group === 'temp') modalTemp = val;
 }
+function pickShot(el, idx) {
+  el.parentElement.querySelectorAll('.sweet-opt').forEach(o => o.classList.remove('active'));
+  el.classList.add('active');
+  if (pendingDrink && pendingDrink.shots) modalShots = pendingDrink.shots[idx];
+  document.getElementById('sweetDrinkPrice').textContent = '$' + hubUnitPrice().toFixed(2);
+  updateModalAddBtn();
+}
+function hubUnitPrice() {
+  if (!pendingDrink) return 0;
+  return pendingDrink.price + (pendingDrink.shots && modalShots === 'Quad' ? HUB_QUAD : 0);
+}
 
 function modalQtyChange(delta) {
   modalQty = Math.max(1, modalQty + delta);
@@ -592,7 +627,7 @@ function modalQtyChange(delta) {
 
 function updateModalAddBtn() {
   if (!pendingDrink) return;
-  const total = (pendingDrink.price * modalQty).toFixed(2);
+  const total = (hubUnitPrice() * modalQty).toFixed(2);
   document.getElementById('modalAddBtn').textContent = 'Add ' + modalQty + ' to Cart \u2014 $' + total;
 }
 
@@ -602,14 +637,16 @@ function confirmAdd() {
   const milk = d.milk ? modalMilk : '\u2014';
   const sweetener = d.sweetener ? modalSweetener : '\u2014';
   const sweetness = '\u2014';
-  const temp = d.temp === 'choice' ? modalTemp : '\u2014';
-  const existing = hubCart.find(c => c.name === d.name && c.temp === temp && c.milk === milk && c.sweetener === sweetener);
+  const temp = d.temp === 'choice' ? modalTemp : (d.temp === 'iced' ? 'Iced' : 'Hot');
+  const shots = d.shots ? modalShots : '\u2014';
+  const unitPrice = hubUnitPrice();
+  const existing = hubCart.find(c => c.name === d.name && c.temp === temp && c.shots === shots && c.milk === milk && c.sweetener === sweetener);
   if (existing) { existing.qty += modalQty; }
-  else { hubCart.push({ id: ++cartIdCounter, name: d.name, price: d.price, temp, milk, sweetener, sweetness, qty: modalQty }); }
+  else { hubCart.push({ id: ++cartIdCounter, name: d.name, price: unitPrice, temp, shots, milk, sweetener, sweetness, qty: modalQty }); }
   closeSweetModal();
   renderCart();
   buildQuickGrid();
-  const label = [temp !== '\u2014' ? temp : '', milk !== '\u2014' ? milk : '', sweetener !== '\u2014' ? sweetener : ''].filter(Boolean).join(' \u00b7 ');
+  const label = [temp !== '\u2014' ? temp : '', shots === 'Quad' ? 'Quad Shot' : '', milk !== '\u2014' ? milk : '', sweetener !== '\u2014' ? sweetener : ''].filter(Boolean).join(' \u00b7 ');
   showToast(modalQty + '\u00d7 ' + d.name + (label ? ' (' + label + ')' : '') + ' added!');
   pendingDrink = null;
 }
@@ -631,7 +668,7 @@ function renderCart() {
   const totalItems = hubCart.reduce((s, c) => s + c.qty, 0);
   countBadge.textContent = totalItems; countBadge.style.display = 'flex'; totalRow.style.display = 'flex';
   container.innerHTML = hubCart.map(c => {
-    const details = [c.temp && c.temp !== '\u2014' ? c.temp : '', c.milk !== '\u2014' ? c.milk : '', c.sweetener !== '\u2014' ? c.sweetener : ''].filter(Boolean).join(' \u00b7 ');
+    const details = [c.temp && c.temp !== '\u2014' ? c.temp : '', c.shots === 'Quad' ? 'Quad Shot' : '', c.milk !== '\u2014' ? c.milk : '', c.sweetener !== '\u2014' ? c.sweetener : ''].filter(Boolean).join(' \u00b7 ');
     return '<div class="cart-item">' +
       '<div class="cart-item-info"><div class="cart-item-name">' + c.name + '</div>' +
       (details ? '<div class="cart-item-sweet">' + details + '</div>' : '') +
@@ -666,9 +703,10 @@ async function submitWalkin() {
   btn.disabled = true; btn.textContent = 'Saving...';
   const name = document.getElementById('hubName').value.trim() || 'Walk-In Customer';
   const phone = document.getElementById('hubPhone').value.trim() || '';
+  // Barista ticket format: "2x ICED Latte (Quad Shot, Oat, Vanilla)" \u2014 Regular (Double) omitted on purpose
   const itemsSummary = hubCart.map(c => {
-    const opts = [c.temp && c.temp !== '\u2014' ? c.temp : '', c.milk !== '\u2014' ? c.milk : '', c.sweetener !== '\u2014' ? c.sweetener : ''].filter(Boolean).join(', ');
-    return c.qty + 'x ' + c.name + (opts ? ' (' + opts + ')' : '');
+    const opts = [c.shots === 'Quad' ? 'Quad Shot' : '', c.milk !== '\u2014' ? c.milk : '', c.sweetener !== '\u2014' ? c.sweetener : ''].filter(Boolean).join(', ');
+    return c.qty + 'x ' + (c.temp && c.temp !== '\u2014' ? c.temp.toUpperCase() + ' ' : '') + c.name + (opts ? ' (' + opts + ')' : '');
   }).join(', ');
   const total = hubCart.reduce((s, c) => s + c.qty * c.price, 0);
   const order = {
@@ -750,7 +788,15 @@ function renderFeed() {
 
 // Split a combined items string into one line per drink.
 // Splits on ", " only when it precedes a new "Nx " item, so "(Whole, Vanilla)" stays intact.
-function itemLines(items){ return String(items||'').split(/,\s+(?=\d+x\s)/).map(function(li){ return '<div>'+li+'</div>'; }).join(''); }
+function itemLines(items){
+  return String(items||'').split(/,\s+(?=\d+x\s)/).map(function(li){
+    // Lift "2x ICED Latte" / "2x HOT Latte" into a colored temperature badge
+    const badged = li.replace(/^(\d+x)\s+(HOT|ICED)\s+/, function(_, qty, t){
+      return qty + ' <span class="il-badge ' + (t === 'ICED' ? 'iced' : 'hot') + '">' + t + '</span>';
+    });
+    return '<div>' + badged + '</div>';
+  }).join('');
+}
 
 function renderOrderCard(o) {
   const isWalkin = o.type === 'Walk-In';

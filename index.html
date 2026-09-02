@@ -199,6 +199,7 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
 .custom-label{font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:var(--text-soft);margin-bottom:10px;font-weight:500;}
 .chip-row{display:flex;gap:8px;flex-wrap:wrap;}
 .chip{padding:9px 18px;border-radius:50px;border:1.5px solid var(--cream-dark);background:var(--white);font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;color:var(--text-mid);cursor:pointer;transition:all 0.15s;user-select:none;}.chip.selected{border-color:var(--pink);background:var(--pink-pale);color:var(--pink-deep);}
+.chip.locked{opacity:0.55;pointer-events:none;background:var(--cream);border-style:dashed;}
 .modal-add-btn{width:100%;background:var(--pink);color:var(--white);border:none;border-radius:50px;padding:16px;font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;cursor:pointer;margin-top:20px;transition:background 0.2s;}.modal-add-btn:hover{background:var(--pink-deep);}
 
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--brown-dark);color:var(--cream);border-radius:50px;padding:12px 24px;font-size:14px;font-weight:500;opacity:0;transition:all 0.3s;z-index:400;white-space:nowrap;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,0.15);}.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -212,7 +213,7 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
     <img class="hero-logo" src="logo.png" alt="How Lovely Coffee Ko."/>
     <!-- Event line + banners are rendered from Supabase settings (managed via admin.html) -->
     <div class="hero-info" id="heroInfo" style="display:none;"></div>
-    <div style="font-size:11px;color:var(--text-soft);margin-top:10px;letter-spacing:0.03em;">All drinks · 12oz · 2 espresso shots</div>
+    <div style="font-size:11px;color:var(--text-soft);margin-top:10px;letter-spacing:0.03em;">All drinks · 12oz</div>
     <a href="https://www.instagram.com/howlovelycoffee" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:12px;color:var(--pink-deep);text-decoration:none;font-weight:500;letter-spacing:0.02em;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none"/></svg>@howlovelycoffee</a>
     <div id="bannerArea"></div>
   </div>
@@ -220,7 +221,7 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
   <div class="filter-bar">
     <div class="filter-pill active" onclick="filterCat('all',this)">All</div>
     <div class="filter-pill" onclick="filterCat('hot',this)">Hot</div>
-    <div class="filter-pill" onclick="filterCat('cold',this)">Cold</div>
+    <div class="filter-pill" onclick="filterCat('cold',this)">Iced</div>
   </div>
 
   <div class="menu-grid" id="menuGrid">
@@ -354,6 +355,10 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
       <div class="custom-label">Temperature</div>
       <div class="chip-row" id="tempChips"></div>
     </div>
+    <div id="shotsSection" style="margin-bottom:16px;display:none;">
+      <div class="custom-label">Espresso Shots</div>
+      <div class="chip-row" id="shotsChips"></div>
+    </div>
     <div id="milkSection" style="margin-bottom:16px;display:none;">
       <div class="custom-label">Milk</div>
       <div class="chip-row" id="milkChips"></div>
@@ -381,10 +386,11 @@ body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--text);m
 const SUPABASE_URL='https://omnlofhavybzikvyfksu.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tbmxvZmhhdnliemlrdnlma3N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMTgzOTMsImV4cCI6MjA5MDU5NDM5M30.hLu5DKWCV2Xt3_nBe9RKIm1-lY94oU_Vi1_Pphg5xnQ';
 const SHEETS_URL=''; // optional Google Sheets backup — paste Apps Script URL to enable
+const QUAD_SHOT_UPCHARGE=0; // fallback only — the live value comes from admin settings (quad_upcharge)
 
-let MENU=[],SETTINGS={},SLOTS=[],CUTOFF=null,ORDERING_OPEN=true,STORE_READY=false;
+let MENU=[],SETTINGS={},SLOTS=[],CUTOFF=null,ORDERING_OPEN=true,STORE_READY=false,QUAD_UP=QUAD_SHOT_UPCHARGE;
 let cart={},selectedSlot='',currentOrder=null,modalItem=null;
-let modalMilk='',modalSweetener='',modalTemp='',modalQty=1;
+let modalMilk='',modalSweetener='',modalTemp='',modalShots='',modalQty=1;
 function safeId(str){return str.replace(/[^a-zA-Z0-9]/g,'').slice(0,40);}
 
 // ══ SUPABASE HELPERS ══
@@ -413,8 +419,11 @@ async function loadStore(){
       id:'item'+m.id,num:i+1,name:m.name,price:parseFloat(m.price),temp:m.temp_mode||'hot',desc:m.description,
       milk:(Array.isArray(m.milk_options)&&m.milk_options.length)?m.milk_options:null,
       sweetener:(Array.isArray(m.sweetener_options)&&m.sweetener_options.length)?m.sweetener_options:null,
+      shots:(Array.isArray(m.shots_options)&&m.shots_options.length)?m.shots_options:null,
       soldOut:!!m.sold_out,featured:!!m.featured
     }));
+    QUAD_UP=parseFloat(SETTINGS.quad_upcharge);
+    if(isNaN(QUAD_UP)||QUAD_UP<0)QUAD_UP=QUAD_SHOT_UPCHARGE;
     ORDERING_OPEN=SETTINGS.ordering_open!=='false';
     CUTOFF=SETTINGS.cutoff_at?new Date(SETTINGS.cutoff_at):null;
     if(CUTOFF&&isNaN(CUTOFF.getTime()))CUTOFF=null;
@@ -573,6 +582,7 @@ function openModal(d){
   modalItem=d;modalQty=1;
   modalMilk=d.milk?d.milk[0]:'';modalSweetener=d.sweetener?d.sweetener[0]:'';
   modalTemp=d.temp==='choice'?'Hot':'';
+  modalShots=d.shots?d.shots[0]:'';
   document.getElementById('modalName').textContent=d.name;
   document.getElementById('modalSpecialBadge').style.display=d.featured?'block':'none';
   document.getElementById('modalPrice').textContent='$'+d.price.toFixed(2);
@@ -581,7 +591,10 @@ function openModal(d){
   updateModalBtn();
   const tempSec=document.getElementById('tempSection'),tempChips=document.getElementById('tempChips');
   if(d.temp==='choice'){tempSec.style.display='block';tempChips.innerHTML=['Hot','Iced'].map((t,i)=>'<div class="chip'+(i===0?' selected':'')+'" onclick="selectChip(\'temp\',this,\''+t+'\')">'+t+'</div>').join('');}
-  else{tempSec.style.display='none';tempChips.innerHTML='';}
+  else{tempSec.style.display='block';tempChips.innerHTML='<div class="chip locked">'+(d.temp==='iced'?'Iced only':'Hot only')+'</div>';}
+  const shotsSec=document.getElementById('shotsSection'),shotsChips=document.getElementById('shotsChips');
+  if(d.shots){shotsSec.style.display='block';shotsChips.innerHTML=d.shots.map((s,i)=>'<div class="chip'+(i===0?' selected':'')+'" onclick="selectOpt(\'shots\',this,'+i+')">'+escapeHtml(s)+(s==='Quad'&&QUAD_UP>0?' +$'+QUAD_UP.toFixed(2):'')+'</div>').join('');}
+  else{shotsSec.style.display='none';shotsChips.innerHTML='';}
   const milkSec=document.getElementById('milkSection'),milkChips=document.getElementById('milkChips');
   if(d.milk){milkSec.style.display='block';milkChips.innerHTML=d.milk.map((m,i)=>'<div class="chip'+(i===0?' selected':'')+'" onclick="selectOpt(\'milk\',this,'+i+')">'+escapeHtml(m)+'</div>').join('');}
   else{milkSec.style.display='none';milkChips.innerHTML='';}
@@ -603,6 +616,11 @@ function selectOpt(group,el,idx){
   el.classList.add('selected');
   if(group==='milk'&&modalItem.milk)modalMilk=modalItem.milk[idx];
   if(group==='sweetener'&&modalItem.sweetener)modalSweetener=modalItem.sweetener[idx];
+  if(group==='shots'&&modalItem.shots){modalShots=modalItem.shots[idx];updateModalBtn();document.getElementById('modalPrice').textContent='$'+modalUnitPrice().toFixed(2);}
+}
+function modalUnitPrice(){
+  if(!modalItem)return 0;
+  return modalItem.price+(modalItem.shots&&modalShots==='Quad'?QUAD_UP:0);
 }
 function modalQtyChange(delta){
   modalQty=Math.max(1,modalQty+delta);
@@ -611,7 +629,7 @@ function modalQtyChange(delta){
 }
 function updateModalBtn(){
   if(!modalItem)return;
-  const total=(modalItem.price*modalQty).toFixed(2);
+  const total=(modalUnitPrice()*modalQty).toFixed(2);
   document.getElementById('modalAddBtn').textContent='Add '+modalQty+' to Order — $'+total;
 }
 
@@ -619,12 +637,14 @@ function addToCartFromModal(){
   if(!modalItem)return;
   const d=modalItem;
   const milk=d.milk?modalMilk:'—';const sweetener=d.sweetener?modalSweetener:'—';
-  const temp=d.temp==='choice'?modalTemp:'—';
-  const key=d.name+'||'+temp+'||'+milk+'||'+sweetener;
-  if(!cart[key])cart[key]={name:d.name,price:d.price,qty:0,temp,milk,sweetener,id:d.id,featured:!!d.featured};
+  const temp=d.temp==='choice'?modalTemp:(d.temp==='iced'?'Iced':'Hot');
+  const shots=d.shots?modalShots:'—';
+  const unitPrice=modalUnitPrice();
+  const key=d.name+'||'+temp+'||'+shots+'||'+milk+'||'+sweetener;
+  if(!cart[key])cart[key]={name:d.name,price:unitPrice,qty:0,temp,shots,milk,sweetener,id:d.id,featured:!!d.featured};
   cart[key].qty+=modalQty;
   renderCartBar();closeModal();
-  let label=[temp!=='—'?temp:'',milk!=='—'?milk:'',sweetener!=='—'?sweetener:''].filter(Boolean).join(' · ');
+  let label=[temp!=='—'?temp:'',shots==='Quad'?'Quad Shot':'',milk!=='—'?milk:'',sweetener!=='—'?sweetener:''].filter(Boolean).join(' · ');
   showToast('Added '+modalQty+'× '+d.name+(label?' ('+label+')':''));
 }
 
@@ -670,9 +690,9 @@ function buildSummary(){
   const c=document.getElementById('summaryItems');c.innerHTML='';
   if(!cartCount()){c.innerHTML='<div style="color:var(--text-soft);font-size:13px;padding:8px 0;">No items yet!</div>';document.getElementById('summaryTotal').textContent='$0.00';return;}
   const group=document.createElement('div');group.className='summary-group';
-  Object.entries(cart).forEach(([key,{name,qty,price,temp,milk,sweetener,featured}])=>{
+  Object.entries(cart).forEach(([key,{name,qty,price,temp,shots,milk,sweetener,featured}])=>{
     const row=document.createElement('div');row.className='cart-item';row.id='cart-'+safeId(key);
-    const details=[temp&&temp!=='—'?temp:'',milk!=='—'?milk:'',sweetener!=='—'?sweetener:''].filter(Boolean).join(' · ');
+    const details=[temp&&temp!=='—'?temp:'',shots==='Quad'?'Quad Shot':'',milk!=='—'?milk:'',sweetener!=='—'?sweetener:''].filter(Boolean).join(' · ');
     const safeKey=key.replace(/'/g,"\\'");
     row.innerHTML=
       '<div class="cart-item-top">'+
@@ -742,14 +762,16 @@ function submitOrder(){
   document.getElementById('slot-error').style.display='none';
   if(!cartCount()){showToast('Your cart is empty!');return;}
   const name=firstName+' '+lastName;
-  const lineItems=Object.values(cart).map(({name,qty,price,temp,milk,sweetener,featured})=>{
-    const opts=[temp&&temp!=='—'?temp:'',milk!=='—'?milk:'',sweetener!=='—'?sweetener:''].filter(Boolean).join(' · ');
-    return {qty:qty,name:(featured?'✨ ':'')+name,opts:opts,lineTotal:(qty*price).toFixed(2)};
+  const lineItems=Object.values(cart).map(({name,qty,price,temp,shots,milk,sweetener,featured})=>{
+    const opts=[shots==='Quad'?'Quad Shot':'',milk!=='—'?milk:'',sweetener!=='—'?sweetener:''].filter(Boolean).join(' · ');
+    const dispName=(featured?'✨ ':'')+(temp&&temp!=='—'?temp.toUpperCase()+' ':'')+name;
+    return {qty:qty,name:dispName,opts:opts,lineTotal:(qty*price).toFixed(2)};
   });
   currentOrder={name,phone,slot:selectedSlot,paymentMethod:'',notes:'',lineItems:lineItems,
-    items:Object.values(cart).map(({name,qty,temp,milk,sweetener})=>{
-      const opts=[temp&&temp!=='—'?temp:'',milk!=='—'?milk:'',sweetener!=='—'?sweetener:''].filter(Boolean).join(', ');
-      return qty+'x '+name+(opts?' ('+opts+')':'');
+    // Barista ticket format: "2x ICED Latte (Quad Shot, Oat, Vanilla)" — Regular (Double) omitted on purpose
+    items:Object.values(cart).map(({name,qty,temp,shots,milk,sweetener})=>{
+      const opts=[shots==='Quad'?'Quad Shot':'',milk!=='—'?milk:'',sweetener!=='—'?sweetener:''].filter(Boolean).join(', ');
+      return qty+'x '+(temp&&temp!=='—'?temp.toUpperCase()+' ':'')+name+(opts?' ('+opts+')':'');
     }).join(', '),
     total:cartTotal().toFixed(2),status:'pending',type:'preorder'};
   document.getElementById('payAmount').textContent='$'+currentOrder.total;

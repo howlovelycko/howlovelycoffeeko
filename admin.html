@@ -147,6 +147,8 @@ details.removed summary::-webkit-details-marker{display:none;}
     </div>
     <label>Location</label>
     <input type="text" id="setLocation" placeholder="e.g. Cross Culture Church"/>
+    <label>Quad shot upcharge ($ — 0 = no extra charge)</label>
+    <input type="number" id="setQuadUp" step="0.25" min="0" placeholder="0"/>
     <label>Specials section title (shown above starred ★ drinks — emoji ok)</label>
     <input type="text" id="setSpecialTitle" placeholder="e.g. Christmas Menu"/>
     <label>Specials icon (drawn beside the title)</label>
@@ -197,6 +199,12 @@ details.removed summary::-webkit-details-marker{display:none;}
       <div class="seg-btn" id="segChoice" onclick="setTemp('choice')">Customer's choice</div>
     </div>
     <div class="opt-note" id="tempNote">Customers will pick hot or iced when ordering.</div>
+    <label>Espresso shots</label>
+    <div class="seg">
+      <div class="seg-btn" id="segShotsOff" onclick="setShots(false)">No shot choice</div>
+      <div class="seg-btn" id="segShotsOn" onclick="setShots(true)">Offer Regular / Quad</div>
+    </div>
+    <div class="opt-note">Customers choose Regular (Double) or Quad. Set the Quad upcharge under Next Event.</div>
     <label>Milk choices (tap to toggle on/off)</label>
     <div class="chip-wrap" id="edMilkChips"></div>
     <label>Sweetener choices (tap to toggle on/off)</label>
@@ -221,8 +229,9 @@ details.removed summary::-webkit-details-marker{display:none;}
 const SUPABASE_URL='https://omnlofhavybzikvyfksu.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tbmxvZmhhdnliemlrdnlma3N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMTgzOTMsImV4cCI6MjA5MDU5NDM5M30.hLu5DKWCV2Xt3_nBe9RKIm1-lY94oU_Vi1_Pphg5xnQ';
 
-let SETTINGS={},MENU=[],REMOVED=[],ANNS=[],SLOTS=[],editingId=null,edTemp='hot';
+let SETTINGS={},MENU=[],REMOVED=[],ANNS=[],SLOTS=[],editingId=null,edTemp='hot',edShots=false;
 let edMilkSel=[],edSweetSel=[],PICKED_ICON='sparkle',sortSpecial=null,sortRegular=null;
+const SHOT_OPTIONS=['Regular (Double)','Quad'];
 
 // ══ SECTION ICONS (same set the customer site renders) ══
 const ICONS={
@@ -295,6 +304,7 @@ async function loadAll(){
     if(SETTINGS.sweetener_list===undefined){SETTINGS.sweetener_list='Vanilla, SF Vanilla, Hazelnut';sbSend('POST','settings',{key:'sweetener_list',value:SETTINGS.sweetener_list}).catch(()=>{});}
     if(SETTINGS.special_title===undefined){SETTINGS.special_title='';sbSend('POST','settings',{key:'special_title',value:''}).catch(()=>{});}
     if(SETTINGS.special_icon===undefined){SETTINGS.special_icon='sparkle';sbSend('POST','settings',{key:'special_icon',value:'sparkle'}).catch(()=>{});}
+    if(SETTINGS.quad_upcharge===undefined){SETTINGS.quad_upcharge='0';sbSend('POST','settings',{key:'quad_upcharge',value:'0'}).catch(()=>{});}
     MENU=menuRows.filter(m=>m.active);
     REMOVED=menuRows.filter(m=>!m.active);
     SLOTS=slotRows;ANNS=annRows;
@@ -317,6 +327,7 @@ function renderSettings(){
   document.getElementById('setLocation').value=SETTINGS.location||'';
   document.getElementById('setClosedMsg').value=SETTINGS.closed_message||'';
   document.getElementById('setSpecialTitle').value=SETTINGS.special_title||'';
+  document.getElementById('setQuadUp').value=SETTINGS.quad_upcharge||'0';
   PICKED_ICON=SETTINGS.special_icon||'sparkle';
   renderIconPicker();
 }
@@ -340,7 +351,8 @@ async function saveSettings(){
       location:document.getElementById('setLocation').value.trim(),
       closed_message:document.getElementById('setClosedMsg').value.trim(),
       special_title:document.getElementById('setSpecialTitle').value.trim(),
-      special_icon:PICKED_ICON
+      special_icon:PICKED_ICON,
+      quad_upcharge:String(Math.max(0,parseFloat(document.getElementById('setQuadUp').value)||0))
     };
     for(const [key,value] of Object.entries(pairs)){
       await sbSend('PATCH','settings?key=eq.'+key,{value});
@@ -430,6 +442,7 @@ function drinkRow(m,num,canDrag){
     '<div class="mi-tags">'+
       '<span class="pill '+(m.temp_mode==='iced'?'cold':(m.temp_mode==='choice'?'choice':'hot'))+'">'+(m.temp_mode==='iced'?'Iced only':(m.temp_mode==='choice'?'Hot or iced':'Hot only'))+'</span> '+
       (m.sold_out?'<span class="pill so">Sold Out</span> ':'')+
+      (m.shots_options&&m.shots_options.length?'<span class="pill choice">Shots ✓</span> ':'')+
       (milk?' Milk: '+esc(milk)+'.':'')+(sweet?' Sweeteners: '+esc(sweet)+'.':'')+
     '</div>'+
     '<div class="mi-actions">'+
@@ -545,6 +558,11 @@ function setTemp(t){
   document.getElementById('segChoice').classList.toggle('on',t==='choice');
   document.getElementById('tempNote').style.display=t==='choice'?'block':'none';
 }
+function setShots(on){
+  edShots=on;
+  document.getElementById('segShotsOff').classList.toggle('on',!on);
+  document.getElementById('segShotsOn').classList.toggle('on',on);
+}
 function openEditor(id){
   editingId=id;
   const m=id?MENU.find(x=>x.id===id):null;
@@ -556,6 +574,7 @@ function openEditor(id){
   edSweetSel=m?(m.sweetener_options||[]).slice():masterList('sweetener');
   renderOptChips('milk');renderOptChips('sweetener');
   setTemp(m?(m.temp_mode||'hot'):'hot');
+  setShots(m?!!(m.shots_options&&m.shots_options.length):false);
   document.getElementById('editorOverlay').classList.add('open');
 }
 function closeEditor(){document.getElementById('editorOverlay').classList.remove('open');editingId=null;}
@@ -569,7 +588,8 @@ async function saveDrink(){
     name,description:document.getElementById('edDesc').value.trim(),price,
     temp_mode:edTemp,
     milk_options:edMilkSel.slice(),
-    sweetener_options:edSweetSel.slice()
+    sweetener_options:edSweetSel.slice(),
+    shots_options:edShots?SHOT_OPTIONS.slice():[]
   };
   const btn=document.getElementById('editorSaveBtn');btn.disabled=true;btn.textContent='Saving…';
   try{
